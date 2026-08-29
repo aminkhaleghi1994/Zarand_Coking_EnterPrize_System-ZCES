@@ -16,8 +16,42 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 0 complete** — workspace, tooling, skills, fonts, Spec Kit and
-governance are in place. Implementation phases 1–11 run sequentially.
+**Phase 1 complete (Foundation Skeleton)** — backend platform (config,
+logging + trace correlation, standard error envelope, `/healthz`), frontend
+scaffold (bilingual EN/FA, RTL, DESIGN.md tokens, Kalameh fonts, login shell,
+BFF health proxy), Alembic baseline + shared entity mixins, bring-up scripts,
+CI. Phases 2–11 run sequentially; next: `auth-rbac-scope-platform`.
+
+## Quick start (Windows PowerShell)
+
+1. Configure environment:
+
+   ```powershell
+   Copy-Item backend\.env.example backend\.env       # then edit values
+   Copy-Item frontend\.env.example frontend\.env.local
+   ```
+
+2. Create the dev database (match `backend\.env`):
+
+   ```sql
+   CREATE DATABASE zces_dev;
+   CREATE USER zces_user WITH PASSWORD '<from .env>';
+   GRANT ALL PRIVILEGES ON DATABASE zces_dev TO zces_user;
+   ALTER DATABASE zces_dev OWNER TO zces_user;
+   ```
+
+3. Bring up both apps:
+
+   ```powershell
+   .\scripts\dev-backend.ps1     # venv → deps → alembic → uvicorn :8000
+   .\scripts\dev-frontend.ps1    # npm install → next dev :3000
+   ```
+
+4. Verify the phase gate:
+
+   ```powershell
+   .\scripts\smoke-test.ps1      # healthz, DB up, BFF proxy, EN/FA, error envelope, trace ids
+   ```
 
 ## Repository layout
 
@@ -47,6 +81,19 @@ Spec-driven with GitHub Spec Kit — each phase runs:
 `/speckit.specify → clarify → plan → analyze → tasks → implement → converge`
 
 Phase gates: app boots · all tests green · manual smoke test passed.
+
+Quality gates (from `backend/` and `frontend/` respectively):
+
+```powershell
+# backend
+ruff check app tests; mypy app; pytest
+
+# frontend
+npm run lint; npx tsc --noEmit; npm run build
+```
+
+CI (`.github/workflows/ci.yml`) runs the same gates on every push/PR —
+backend with a PostgreSQL 16 service container.
 
 Backend (PowerShell, from `backend/`):
 
