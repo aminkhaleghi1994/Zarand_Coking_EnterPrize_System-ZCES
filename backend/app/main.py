@@ -1,0 +1,82 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
+
+from app.common.schemas import HealthStatus
+from app.core.config import Settings, get_settings
+from app.core.database import check_database_health, dispose_engine, get_engine, init_engine
+from app.core.errors import register_exception_handlers
+from app.core.logging import setup_logging
+from app.core.tracing import new_trace_id, set_trace_id
+
+TRACE_HEADER = "X-Request-ID"
+
+
+class TraceMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        incoming = request.headers.get(TRACE_HEADER, "").strip()
+        trace_id = incoming or new_trace_id()
+        set_trace_id(trace_id)
+        response = await call_next(request)
+        response.headers[TRACE_HEADER] = trace_id
+        return response
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    settings = app.state.settings
+    init_engine(settings)
+    yield
+    dispose_engine()
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    resolved = settings or get_settings()
+    setup_logging(resolved.LOG_LEVEL)
+
+    app = FastAPI(
+        title=resolved.APP_NAME,
+        version=resolved.APP_VERSION,
+        lifespan=lifespan,
+    )
+    app.state.settings = resolved
+
+    if resolved.cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=resolved.cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    app.add_middleware(TraceMiddleware)
+    register_exception_handlers(app)
+
+    async def health_status() -> HealthStatus:
+        from starlette.concurrency import run_in_threadpool
+
+        database = await run_in_threadpool(check_database_health, get_engine())
+        return HealthStatus(
+            app=resolved.APP_NAME,
+            env=resolved.APP_ENV,
+            version=resolved.APP_VERSION,
+            components={"database": database},
+        )
+
+    @app.get("/healthz", response_model=HealthStatus, tags=["health"])
+    async def healthz() -> HealthStatus:
+        return await health_status()
+
+    @app.get(f"{resolved.API_V1_PREFIX}/healthz", response_model=HealthStatus, tags=["health"])
+    async def api_healthz() -> HealthStatus:
+        return await health_status()
+
+    return app
+
+
+app = create_app()
