@@ -27,7 +27,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      ZCES_TEST_DATABASE_URL: postgresql+psycopg://zces_user:zces_dev_pw@127.0.0.1:5432/zces_dev
+      DATABASE_URL: postgresql+psycopg://zces_user:zces_dev_pw@127.0.0.1:5432/zces_dev
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
