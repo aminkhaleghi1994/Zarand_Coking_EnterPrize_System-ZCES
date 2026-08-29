@@ -43,8 +43,17 @@
     "submitting": "Signing in…",
     "remember": "Keep me signed in",
     "forgot": "Forgot password?",
-    "phaseNote": "Authentication is delivered in Phase 2 — this page is the visual shell.",
-    "formInvalid": "Please fix the highlighted fields and try again."
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "formInvalid": "Please fix the highlighted fields and try again.",
+    "errors": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordShort": "Password must be at least 8 characters."
+    }
+  },
+  "auth": {
+    "logout": "Sign out",
+    "loggingOut": "Signing out…"
   },
   "errors": {
     "codes": {

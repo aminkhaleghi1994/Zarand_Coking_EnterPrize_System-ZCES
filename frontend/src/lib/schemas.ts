@@ -26,3 +26,49 @@ export const ErrorEnvelopeSchema = z.object({
 });
 
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
+
+export const SessionUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  username: z.string(),
+  is_active: z.boolean(),
+});
+
+export const ScopeAssignmentSchema = z.object({
+  id: z.string(),
+  level: z.enum(["global", "complex", "workplace"]),
+  module: z.string(),
+  resource: z.string(),
+  operation: z.string(),
+  complex_id: z.string().nullable().optional(),
+  workplace_id: z.string().nullable().optional(),
+});
+
+export const MeSchema = z.object({
+  user: SessionUserSchema,
+  roles: z.array(z.string()),
+  permissions: z.array(z.string()),
+  scopes: z.array(ScopeAssignmentSchema),
+});
+
+export type Me = z.infer<typeof MeSchema>;
+
+export const TokenPairSchema = z.object({
+  user: SessionUserSchema,
+  roles: z.array(z.string()),
+  access_token: z.string(),
+  access_expires_in: z.number().int().positive(),
+  refresh_token: z.string(),
+});
+
+export type TokenPair = z.infer<typeof TokenPairSchema>;
+
+export const LoginResponseSchema = z.object({
+  user: SessionUserSchema,
+  roles: z.array(z.string()),
+});
+
+export const LoginInputSchema = z.object({
+  email: z.email("login.errors.emailInvalid"),
+  password: z.string().min(8, "login.errors.passwordShort"),
+});

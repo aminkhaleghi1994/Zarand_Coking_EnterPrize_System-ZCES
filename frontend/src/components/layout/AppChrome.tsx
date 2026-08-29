@@ -1,11 +1,23 @@
 import { useTranslations } from "next-intl";
 
 import { LocaleSwitcher } from "@/components/common/LocaleSwitcher";
+import { LogoutButton } from "@/features/auth/LogoutButton";
 import { Link } from "@/i18n/navigation";
 
 const NAV_KEYS = ["dashboard", "employees", "warehouse", "assets", "loans"] as const;
 
-export function AppChrome({ children }: { children: React.ReactNode }) {
+export type ChromeIdentity = {
+  email: string;
+  roles: string[];
+} | null;
+
+export function AppChrome({
+  children,
+  identity,
+}: {
+  children: React.ReactNode;
+  identity: ChromeIdentity;
+}) {
   const t = useTranslations();
 
   return (
@@ -14,12 +26,26 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         <span>{t("utilityStrip.forBusiness")}</span>
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
-          <Link
-            href="/login"
-            className="flex h-11 min-w-11 items-center justify-center px-2 font-bold text-white transition-colors duration-200 hover:text-brand-bright"
-          >
-            {t("utilityStrip.signIn")}
-          </Link>
+          {identity ? (
+            <span className="flex items-center gap-2">
+              <span className="hidden max-w-48 truncate text-white/90 md:inline" title={identity.email}>
+                {identity.email}
+              </span>
+              {identity.roles.length > 0 && (
+                <span className="hidden rounded-md bg-white/10 px-2 py-0.5 text-xs text-white lg:inline">
+                  {identity.roles.join(" · ")}
+                </span>
+              )}
+              <LogoutButton />
+            </span>
+          ) : (
+            <Link
+              href="/login"
+              className="flex h-11 min-w-11 items-center justify-center px-2 font-bold text-white transition-colors duration-200 hover:text-brand-bright"
+            >
+              {t("utilityStrip.signIn")}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -41,12 +67,14 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               </span>
             ))}
           </nav>
-          <Link
-            href="/login"
-            className="hidden h-11 items-center rounded-md bg-brand px-4 text-sm font-bold uppercase tracking-wide text-white transition-colors duration-200 hover:bg-brand-deep md:inline-flex"
-          >
-            {t("utilityStrip.signIn")}
-          </Link>
+          {!identity && (
+            <Link
+              href="/login"
+              className="hidden h-11 items-center rounded-md bg-brand px-4 text-sm font-bold uppercase tracking-wide text-white transition-colors duration-200 hover:bg-brand-deep md:inline-flex"
+            >
+              {t("utilityStrip.signIn")}
+            </Link>
+          )}
         </div>
       </header>
 

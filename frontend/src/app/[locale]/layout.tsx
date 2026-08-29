@@ -3,9 +3,7 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { PageTransition } from "@/components/common/PageTransition";
 import { Providers } from "@/components/providers/Providers";
-import { AppChrome } from "@/components/layout/AppChrome";
 import { kalamehForLocale } from "@/fonts/kalameh";
 import { routing } from "@/i18n/routing";
 
@@ -48,11 +46,7 @@ export default async function LocaleLayout({
     <html lang={locale} dir={direction} className={font.variable}>
       <body className="antialiased">
         <NextIntlClientProvider>
-          <Providers>
-            <AppChrome>
-              <PageTransition>{children}</PageTransition>
-            </AppChrome>
-          </Providers>
+          <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>
