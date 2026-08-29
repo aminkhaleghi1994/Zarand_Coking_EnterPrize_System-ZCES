@@ -34,6 +34,35 @@ class Settings(BaseSettings):
 
     CORS_ALLOWED_ORIGINS: str | None = None
 
+    JWT_SECRET_KEY: str = Field(default="", repr=False)
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    COOKIE_SECURE: bool = False
+    COOKIE_HTTPONLY: bool = True
+    COOKIE_SAMESITE: str = "lax"
+
+    INITIAL_ADMIN_EMAIL: str | None = None
+    INITIAL_ADMIN_USERNAME: str | None = None
+    INITIAL_ADMIN_PASSWORD: str | None = Field(default=None, repr=False)
+
+    @model_validator(mode="after")
+    def _validate_jwt_config(self) -> "Settings":
+        if len(self.JWT_SECRET_KEY) < 16:
+            raise SettingsValidationError(
+                "JWT_SECRET_KEY must be at least 16 characters long"
+            )
+        if self.ACCESS_TOKEN_EXPIRE_MINUTES < 1:
+            raise SettingsValidationError("ACCESS_TOKEN_EXPIRE_MINUTES must be >= 1")
+        if self.REFRESH_TOKEN_EXPIRE_DAYS < 1:
+            raise SettingsValidationError("REFRESH_TOKEN_EXPIRE_DAYS must be >= 1")
+        samesite = self.COOKIE_SAMESITE.lower()
+        if samesite not in {"lax", "strict", "none"}:
+            raise SettingsValidationError("COOKIE_SAMESITE must be one of lax, strict, none")
+        self.COOKIE_SAMESITE = samesite
+        return self
+
     @model_validator(mode="after")
     def _validate_database_config(self) -> "Settings":
         parts = {

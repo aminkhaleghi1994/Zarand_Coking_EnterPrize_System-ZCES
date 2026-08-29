@@ -48,6 +48,18 @@ class AppError(Exception):
         self.details = details
 
 
+def not_found(message: str = "Resource not found") -> AppError:
+    return AppError(RESOURCE_NOT_FOUND, message, status_code=404)
+
+
+def duplicate_resource(message: str = "A duplicate record already exists") -> AppError:
+    return AppError(DUPLICATE_RESOURCE, message, status_code=409)
+
+
+def validation_error(message: str, details: dict[str, Any] | None = None) -> AppError:
+    return AppError(VALIDATION_ERROR, message, status_code=422, details=details)
+
+
 def build_envelope(
     code: str,
     message: str,

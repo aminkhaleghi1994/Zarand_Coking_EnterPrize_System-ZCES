@@ -13,6 +13,9 @@ from app.core.database import check_database_health, dispose_engine, get_engine,
 from app.core.errors import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.tracing import new_trace_id, set_trace_id
+from app.modules.audit.router import router as audit_router
+from app.modules.user.router import admin_router as user_admin_router
+from app.modules.user.router import router as user_router
 
 TRACE_HEADER = "X-Request-ID"
 
@@ -75,6 +78,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get(f"{resolved.API_V1_PREFIX}/healthz", response_model=HealthStatus, tags=["health"])
     async def api_healthz() -> HealthStatus:
         return await health_status()
+
+    app.include_router(user_router, prefix=resolved.API_V1_PREFIX)
+    app.include_router(user_admin_router, prefix=resolved.API_V1_PREFIX)
+    app.include_router(audit_router, prefix=resolved.API_V1_PREFIX)
 
     return app
 

@@ -36,6 +36,12 @@ def get_engine() -> Engine | None:
     return _engine
 
 
+def get_session_factory() -> sessionmaker[Session]:
+    if _session_factory is None:
+        raise RuntimeError("Database engine is not initialized")
+    return _session_factory
+
+
 def dispose_engine() -> None:
     global _engine, _session_factory
     if _engine is not None:

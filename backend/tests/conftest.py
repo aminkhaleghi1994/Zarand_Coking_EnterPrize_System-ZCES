@@ -4,6 +4,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite://")
 os.environ.setdefault("APP_ENV", "development")
 os.environ.setdefault("APP_NAME", "ZCES")
 os.environ.setdefault("APP_VERSION", "0.1.0")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-0123456789abcdef")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
