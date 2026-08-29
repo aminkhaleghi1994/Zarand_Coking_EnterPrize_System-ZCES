@@ -1,0 +1,46 @@
+# ===== Python / Backend =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ===== Node / Frontend =====
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+*.log
+
+# ===== Env & secrets =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ===== OS / Editor =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ===== Agent tooling local state =====
+# .opencode/ commands & skills ARE committed (project tooling).
+# Only local/secret artifacts are ignored:
+.opencode/auth.json
+.opencode/*.local.*
+
+# ===== Misc =====
+coverage/
+*.tmp

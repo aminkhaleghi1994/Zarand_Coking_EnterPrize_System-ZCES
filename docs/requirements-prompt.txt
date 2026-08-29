@@ -1,0 +1,1349 @@
+سند استخراج نیازمندی‌ها و مشخصات کلیدی پروژه
+1. خلاصه پروژه
+هدف پروژه، طراحی و پیاده‌سازی یک سامانه جامع سازمانی تحت وب است که داده‌ها و فرآیندهای اصلی سازمان را در یک سیستم یکپارچه، امن، قابل توسعه و قابل ممیزی متمرکز کند.
+این سامانه باید حوزه‌های زیر را پوشش دهد:
+•	مدیریت کاربران و کارکنان
+•	مدیریت انبار و موجودی
+•	ردیابی اموال و دارایی‌ها
+•	اعتبارسنجی و مدیریت وام و ضمانت
+•	اعلان‌ها و رویدادها
+•	گزارش‌ها و داشبوردهای مدیریتی
+•	تنظیمات سیستم
+•	ثبت کامل رخدادها و عملیات حساس در Audit Log
+معماری پیشنهادی پروژه، Modular Monolith است؛ یعنی سیستم به‌صورت یکپارچه توسعه و استقرار می‌یابد، اما از نظر ساختار داخلی به ماژول‌های مستقل، قابل تست و قابل توسعه تقسیم می‌شود.
+________________________________________
+2. اهداف اصلی محصول
+2.1 مسئله کسب‌وکاری
+در بسیاری از سازمان‌ها، اطلاعات کارکنان، موجودی انبار، درخواست‌های کالا، اموال، وام‌ها و گزارش‌های مدیریتی در فایل‌های اکسل، فرم‌های دستی یا سیستم‌های جداگانه نگهداری می‌شوند. این موضوع باعث ایجاد مشکلات زیر می‌شود:
+•	ثبت اطلاعات تکراری
+•	نبود دید متمرکز نسبت به کارکنان، اموال، موجودی و درخواست‌ها
+•	احتمال خطا در تخصیص کالا و دارایی
+•	دشواری در کنترل مجوزها
+•	نبود گزارش‌های قابل اعتماد
+•	عدم امکان ممیزی دقیق عملیات حساس
+•	دشواری در اعمال سیاست‌های متفاوت برای محل‌های کاری مختلف
+2.2 هدف محصول
+ایجاد یک سامانه متمرکز برای مدیریت اطلاعات و فرآیندهای سازمانی، با تمرکز بر امنیت، قابلیت توسعه، کنترل دسترسی دقیق، ثبت رویدادها و گزارش‌دهی مدیریتی.
+________________________________________
+3. محدوده محصول
+3.1 موارد داخل محدوده نسخه اول
+نسخه اول باید شامل موارد زیر باشد:
+مدیریت کاربران و کارکنان
+•	ایجاد و ویرایش کارمند
+•	ایجاد کاربر مرتبط با کارمند
+•	رابطه اجباری یک‌به‌یک بین Employee و User
+•	غیرفعال‌سازی کارمند و کاربر مرتبط
+•	مدیریت نقش‌ها
+•	مدیریت مجوزها
+•	تخصیص Scope به کاربران
+•	جلوگیری از ثبت کد ملی تکراری
+•	جلوگیری از ثبت کد پرسنلی تکراری
+ساختار سازمانی
+•	شرکت
+•	مجتمع
+•	محل کار / Workplace
+•	هر کارمند دقیقاً متعلق به یک Workplace است
+•	هر Workplace متعلق به یک Complex است
+•	Company در نسخه اول می‌تواند ثابت و Seed شود
+مدیریت انبار
+•	تعریف انبار
+•	تعریف قفسه
+•	تعریف کاتالوگ کالا
+•	ثبت موجودی کالا در قفسه
+•	ثبت گردش موجودی
+•	جلوگیری از ثبت کالای تکراری
+•	جستجوی زنده کالا هنگام ثبت
+•	هشدار کمبود موجودی
+•	درخواست کالا
+•	خطوط درخواست کالا
+•	تأیید، رد یا انجام درخواست کالا
+•	کنترل موجودی هنگام Fulfillment
+•	ثبت StockMovement برای هر تغییر موجودی
+مدیریت دارایی‌ها
+•	تعریف AssetInstance
+•	تخصیص دارایی
+•	بازگشت دارایی
+•	ثبت تاریخچه دارایی
+•	Audit کامل عملیات دارایی
+مدیریت وام و ضمانت
+•	تعریف سیاست وام برای هر Workplace
+•	ثبت درخواست وام یا ضمانت
+•	اعتبارسنجی درخواست براساس سیاست محل کار
+•	محاسبه براساس سال جلالی
+•	کنترل تعداد درخواست‌های سالانه
+•	کنترل تعداد درخواست‌های کل عمر
+•	کنترل سقف تعهد فعال وام
+•	کنترل سقف تعهد فعال ضمانت
+اعلان‌ها و رویدادها
+•	اعلان داخل سامانه
+•	Event Outbox
+•	انتشار رویدادهای دامنه
+•	استفاده از SSE در نسخه اول
+•	عدم وابستگی تراکنش اصلی به موفقیت ارسال اعلان، مگر در موارد Critical
+گزارش‌ها و داشبورد
+•	داشبورد پایه مدیریتی
+•	گزارش موجودی
+•	گزارش درخواست‌ها
+•	گزارش وام
+•	گزارش عملیات حساس
+•	خروجی Excel با رعایت سطح دسترسی و Masking
+تنظیمات
+•	تنظیمات هشدار کمبود موجودی
+•	تنظیمات گیرندگان اعلان
+•	تنظیمات سیاست تأیید درخواست کالا
+•	تنظیمات داشبورد
+•	Feature Flagها
+•	Audit تغییرات تنظیمات
+Audit Logging
+•	ثبت عملیات حساس
+•	ثبت قبل و بعد تغییرات
+•	اتصال عملیات به actor_user_id
+•	ثبت trace_id
+•	Masking اطلاعات حساس در لاگ‌ها
+راه‌اندازی اولیه
+•	توسعه اولیه روی Windows و Local
+•	Backend با venv
+•	PostgreSQL و Redis به‌صورت Local یا سرویس نصب‌شده روی VM
+•	عدم Hardcode کردن localhost
+•	آماده‌سازی برای Docker در آینده
+•	امکان Deploy مطمئن روی VM
+________________________________________
+3.2 موارد خارج از محدوده نسخه اول
+در نسخه اول این موارد پیاده‌سازی نمی‌شوند:
+•	اپلیکیشن موبایل
+•	اتصال به ERP یا سیستم حسابداری
+•	ذخیره فایل‌ها در Object Storage
+•	OCR
+•	آرشیو اسناد
+•	Multi-tenancy کامل
+•	SMS
+•	Push Notification
+•	BPM پیچیده
+•	Workflow Engine مستقل
+•	سیستم پیچیده گردش کار
+________________________________________
+4. نقش‌های اصلی سیستم
+نقش‌های پایه پیشنهادی:
+content_copy 
+نقش	توضیح
+SuperAdmin	دسترسی کامل به سیستم
+HRAdmin	مدیریت کارکنان و کاربران
+WarehouseKeeper	مدیریت موجودی، قفسه، کالا و گردش انبار
+WarehouseApprover	بررسی و تأیید درخواست‌های کالا
+LoanOfficer	مدیریت سیاست‌ها و درخواست‌های وام
+Auditor	مشاهده لاگ‌ها و گزارش‌های ممیزی
+Manager	مشاهده گزارش‌ها و داشبوردها
+________________________________________
+5. ساختار سازمانی داده‌ها
+ساختار سلسله‌مراتبی سازمان:
+                                            content_copy                        text
+Company
+└── Complex
+    └── Workplace
+        └── Employee
+داده اولیه پیشنهادی
+Complexها
+•	Coking and Tar Refining Complex
+•	Steelmaking Complex
+Workplaceها
+•	Khamroud Coal Mine
+•	Coke Plant 1
+•	Coke Plant 2
+•	Steel Plant
+قوانین
+•	هر Employee فقط به یک Workplace تعلق دارد.
+•	هر Workplace فقط به یک Complex تعلق دارد.
+•	Company در نسخه اول می‌تواند به‌صورت Seed ثابت ایجاد شود.
+________________________________________
+6. معماری کلان سیستم
+6.1 سبک معماری
+معماری پروژه:
+                                            content_copy                        text
+Modular Monolith
+این معماری یعنی پروژه به‌صورت یک محصول یکپارچه اجرا می‌شود، اما از داخل به ماژول‌های جداگانه تقسیم می‌شود.
+مزایا:
+•	توسعه ساده‌تر نسبت به Microservice
+•	Deploy ساده‌تر
+•	تست و نگهداری بهتر نسبت به Monolith شلوغ
+•	امکان تبدیل برخی ماژول‌ها به سرویس مستقل در آینده
+•	مناسب برای تیم کوچک یا متوسط
+________________________________________
+6.2 لایه‌های سیستم
+ساختار لایه‌ای پیشنهادی:
+                                            content_copy                        text
+Endpoint → Service → Repository → Database
+Endpoint
+•	دریافت درخواست HTTP
+•	اعتبارسنجی اولیه ورودی
+•	فراخوانی Service
+•	بازگرداندن پاسخ استاندارد
+Service
+•	محل اصلی منطق کسب‌وکار
+•	اجرای قوانین دامنه
+•	مدیریت تراکنش‌ها
+•	فراخوانی Repositoryها و Contractهای داخلی
+Repository
+•	مسئول Queryها
+•	اعمال Scope Filter
+•	ارتباط مستقیم با پایگاه داده
+•	عدم وجود Business Logic در Repository
+Database
+•	PostgreSQL
+•	نگهداری داده‌های اصلی
+•	Constraintها
+•	Indexها
+•	Partial Unique Indexها
+________________________________________
+7. جریان ارتباطی سیستم
+جریان پیشنهادی:
+                                            content_copy                        text
+Browser
+   ↓
+Next.js BFF
+   ↓
+FastAPI
+   ↓
+PostgreSQL / Redis
+توضیح
+•	Frontend با Next.js ساخته می‌شود.
+•	Next.js به‌عنوان BFF عمل می‌کند.
+•	Backend اصلی با FastAPI پیاده‌سازی می‌شود.
+•	PostgreSQL پایگاه داده اصلی است.
+•	Redis برای Cache، Queue و Celery استفاده می‌شود.
+•	Celery برای Jobهای پس‌زمینه مانند Import استفاده می‌شود.
+________________________________________
+8. تکنولوژی‌های پیشنهادی
+Frontend
+content_copy 
+بخش	تکنولوژی
+Framework	Next.js
+Language	TypeScript
+Routing	App Router
+UI	Tailwind CSS + shadcn/ui
+Forms	React Hook Form
+Validation	Zod
+Data Fetching	TanStack Query
+Backend
+content_copy 
+بخش	تکنولوژی
+Framework	FastAPI
+Language	Python
+ORM	SQLAlchemy 2.0
+Migration	Alembic
+Validation	Pydantic
+Auth	JWT + HttpOnly Cookies
+Background Jobs	Celery
+Cache/Broker	Redis
+Database & Infra
+content_copy 
+بخش	تکنولوژی
+Database	PostgreSQL
+Reverse Proxy	Nginx
+Monitoring	Prometheus + Grafana
+Tracing	OpenTelemetry
+Error Tracking	Sentry
+CI/CD	GitHub Actions
+Containerization Later	Docker + Docker Compose
+________________________________________
+9. ماژول‌های اصلی سیستم
+9.1 User Module
+مالک داده‌های زیر است:
+•	Employee
+•	User
+•	Role
+•	Permission
+•	ScopeAssignment
+وظایف
+•	مدیریت هویت سازمانی
+•	مدیریت کاربران
+•	مدیریت کارکنان
+•	مدیریت نقش‌ها
+•	مدیریت مجوزها
+•	مدیریت Scopeها
+________________________________________
+9.2 Warehouse Module
+مالک داده‌های زیر است:
+•	Warehouse
+•	Shelf
+•	ItemCatalog
+•	InventoryPlacement
+•	StockMovement
+•	ItemRequest
+•	ItemRequestLine
+•	AssetInstance
+•	AssetHistory
+وظایف
+•	مدیریت کالا
+•	مدیریت موجودی
+•	مدیریت درخواست کالا
+•	مدیریت اموال
+•	ثبت گردش کالا
+•	کنترل حداقل موجودی
+________________________________________
+9.3 Loan Module
+مالک داده‌های زیر است:
+•	LoanPolicy
+•	LoanRequest
+وظایف
+•	تعریف سیاست وام برای Workplace
+•	اعتبارسنجی درخواست وام
+•	اعتبارسنجی درخواست ضمانت
+•	کنترل سقف‌ها و تعداد درخواست‌ها
+________________________________________
+9.4 Notification Module
+مالک داده‌های زیر است:
+•	Notification
+•	EventOutbox
+وظایف
+•	ثبت اعلان
+•	ارسال اعلان داخل سامانه
+•	مدیریت Outbox
+•	انتشار Domain Eventها
+________________________________________
+9.5 Audit Module
+مالک داده‌های زیر است:
+•	AuditLog
+وظایف
+•	ثبت عملیات حساس
+•	ذخیره Snapshot قبل و بعد
+•	Masking داده حساس
+•	اتصال لاگ‌ها به trace_id
+________________________________________
+9.6 Settings Module
+مالک داده‌های زیر است:
+•	Setting
+وظایف
+•	مدیریت تنظیمات سیستم
+•	Feature Flagها
+•	سیاست‌های قابل تنظیم
+•	ثبت Audit تغییرات
+________________________________________
+10. موجودیت‌های اصلی دیتابیس
+10.1 فیلدهای مشترک
+تمام موجودیت‌های اصلی باید دارای فیلدهای زیر باشند:
+                                            content_copy                        text
+id: UUID
+created_at: datetime
+updated_at: datetime
+در صورت نیاز:
+                                            content_copy                        text
+deleted_at: datetime nullable
+created_by: UUID nullable
+updated_by: UUID nullable
+version: int
+Mixins پیشنهادی
+                                            content_copy                        text
+IDMixin
+TimestampMixin
+SoftDeleteMixin
+CreatedByMixin
+UpdatedByMixin
+VersionMixin
+OrgScopeMixin
+________________________________________
+10.2 قوانین کلی دیتابیس
+•	تمام Primary Keyها باید UUID باشند.
+•	Foreign Keyهای اصلی نیز UUID باشند.
+•	حذف فیزیکی ممنوع است.
+•	در موارد لازم Soft Delete استفاده شود.
+•	عملیات حساس Audit شود.
+•	برای Unique بودن رکوردهای Active از Partial Unique Index استفاده شود.
+________________________________________
+11. قوانین یکتایی
+Employee
+•	national_id بین کارمندان Active باید Unique باشد.
+•	personnel_code بین کارمندان Active باید Unique باشد.
+ItemCatalog
+•	name بین آیتم‌های Active باید Unique باشد.
+Setting
+•	key باید Unique باشد.
+نکته مهم
+به دلیل استفاده از Soft Delete، Unique Constraint معمولی کافی نیست. باید از Partial Unique Index در PostgreSQL استفاده شود.
+مثال مفهومی:
+                                            content_copy                        sql
+CREATE UNIQUE INDEX uq_employee_national_id_active
+ON employees(national_id)
+WHERE deleted_at IS NULL;
+________________________________________
+12. کنترل دسترسی و امنیت
+12.1 احراز هویت
+روش پیشنهادی:
+•	Access Token کوتاه‌مدت
+•	Refresh Token Rotation
+•	نگهداری Token در HttpOnly Cookie
+•	استفاده از BFF Pattern
+12.2 مدل مجوزدهی
+مدل اصلی:
+                                            content_copy                        text
+User → Roles → Permissions
+User → ScopeAssignments
+12.3 قانون اصلی دسترسی
+دسترسی فقط وقتی معتبر است که هر دو شرط برقرار باشند:
+1.	کاربر Permission لازم را داشته باشد.
+2.	کاربر Scope معتبر برای همان عملیات داشته باشد.
+یعنی Permission به‌تنهایی کافی نیست و Scope هم به‌تنهایی کافی نیست.
+________________________________________
+13. مدل Scope
+قالب Scope
+                                            content_copy                        text
+Scope:Module:Resource:Operation
+مثال‌ها:
+                                            content_copy                        text
+Workplace:warehouse:item:create
+Complex:user:employee:update
+Global:loan:request:read
+سطوح Scope
+                                            content_copy                        text
+Global
+Complex
+Workplace
+قواعد Scope
+•	Global از Complex گسترده‌تر است.
+•	Complex از Workplace گسترده‌تر است.
+•	Scope سطح بالاتر به داده‌های زیرمجموعه دسترسی می‌دهد.
+•	Scope سطح پایین‌تر به داده‌های سطح بالاتر دسترسی نمی‌دهد.
+•	Scopeها با هم Union می‌شوند.
+•	Deny به‌صورت implicit است.
+•	اگر Scope وجود نداشته باشد، دسترسی رد می‌شود.
+قانون بسیار مهم
+هیچ Query در Repository نباید بدون اعمال Scope Filter اجرا شود.
+________________________________________
+14. قراردادهای داخلی بین ماژول‌ها
+برای حفظ استقلال ماژول‌ها، هیچ ماژولی نباید مستقیماً به Repository داخلی ماژول دیگر دسترسی داشته باشد.
+ارتباط بین ماژول‌ها باید از طریق Interface یا Contractهای داخلی انجام شود.
+نمونه Contractهای User Module
+                                            content_copy                        text
+get_employee_by_id(employee_id)
+get_employee_workplace(employee_id)
+search_employees(filters, scope_ctx)
+is_employee_active(employee_id)
+نمونه Contractهای Warehouse Module
+                                            content_copy                        text
+search_item_catalog(query, scope_ctx)
+get_available_inventory(item_catalog_id, workplace_id, scope_ctx)
+reserve_or_validate_stock(...)
+assign_asset(...)
+return_asset(...)
+نمونه Contractهای Loan Module
+                                            content_copy                        text
+get_active_loan_policy(workplace_id, year)
+validate_loan_request(employee_id, workplace_id, amount, type)
+get_employee_loan_summary(employee_id, year)
+نمونه Contractهای Notification Module
+                                            content_copy                        text
+publish_domain_event(event)
+create_notification(...)
+نمونه Contractهای Audit Module
+                                            content_copy                        text
+write_audit_log(...)
+________________________________________
+15. قوانین مهم User Module
+Employee
+فیلدهای اصلی:
+                                            content_copy                        text
+id
+first_name
+last_name
+national_id
+personnel_code
+workplace_id
+organizational_position
+user_id
+قوانین
+•	Employee و User رابطه اجباری یک‌به‌یک دارند.
+•	ایجاد Employee و User باید در یک Transaction انجام شود.
+•	اگر ایجاد User شکست خورد، Employee نباید ذخیره شود.
+•	غیرفعال‌سازی Employee باید User مرتبط را هم غیرفعال کند.
+•	national_id تکراری مجاز نیست.
+•	personnel_code تکراری مجاز نیست.
+________________________________________
+16. قوانین مهم Warehouse Module
+اصل طراحی
+تعریف کالا باید از محل فیزیکی موجودی جدا باشد.
+یعنی:
+                                            content_copy                        text
+ItemCatalog ≠ InventoryPlacement
+کالا در ItemCatalog تعریف می‌شود، اما موجودی آن از ترکیب زیر به‌دست می‌آید:
+                                            content_copy                        text
+Shelf + ItemCatalog = InventoryPlacement
+قوانین کالا
+•	نام کالا در رکوردهای Active باید Unique باشد.
+•	اگر کالا در جستجو وجود داشت، کاربر باید همان را انتخاب کند.
+•	ایجاد کالای تکراری ممنوع است.
+•	جستجوی زنده باید Debounce شود.
+•	جستجو در Backend باید Indexed و Paginated باشد.
+قوانین موجودی
+•	تغییر موجودی بدون StockMovement مجاز نیست.
+•	کاهش موجودی نباید باعث منفی شدن مقدار شود.
+•	Fulfillment درخواست کالا نباید بیشتر از موجودی قابل دسترس باشد.
+•	تغییر موجودی و ثبت StockMovement باید در یک Transaction انجام شود.
+Low Stock
+اگر موجودی از حداقل کمتر شود:
+                                            content_copy                        text
+quantity < min_quantity
+یا براساس تنظیمات:
+                                            content_copy                        text
+quantity <= min_quantity
+سیستم باید:
+•	Alert ایجاد کند.
+•	Notification ارسال کند.
+•	Audit Log ثبت کند.
+________________________________________
+17. قوانین Item Request
+هر درخواست کالا باید:
+•	حداقل یک Line داشته باشد.
+•	دارای purpose_description باشد.
+•	توسط نقش مجاز Fulfill شود.
+•	هنگام Fulfillment موجودی کافی داشته باشد.
+•	تمام تغییر وضعیت‌ها Audit شوند.
+•	برای هر تغییر موجودی StockMovement ثبت شود.
+________________________________________
+18. قوانین Asset Tracking
+سیستم باید بتواند:
+•	دارایی را تعریف کند.
+•	دارایی را به کارمند یا محل تخصیص دهد.
+•	دارایی را بازگرداند.
+•	تاریخچه دارایی را ثبت کند.
+•	عملیات حساس دارایی را Audit کند.
+رویدادهای مهم:
+                                            content_copy                        text
+AssetAssigned
+AssetReturned
+________________________________________
+19. قوانین Loan Module
+LoanPolicy
+فیلدهای اصلی:
+                                            content_copy                        text
+id
+workplace_id
+year
+max_loan_amount
+max_guarantee_amount
+max_request_count_per_year
+max_request_count_lifetime
+is_active
+LoanRequest
+فیلدهای اصلی:
+                                            content_copy                        text
+id
+employee_id
+workplace_id
+type: loan | guarantee
+amount
+status: pending | active | settled | cancelled
+year
+settled_at
+قوانین اعتبارسنجی
+ترتیب اعتبارسنجی باید دقیقاً به شکل زیر باشد:
+1.	تعداد کل درخواست‌ها در طول عمر
+2.	تعداد درخواست‌ها در سال جاری
+3.	سقف تعهد فعال وام در سال جاری
+4.	سقف تعهد فعال ضمانت در سال جاری
+قوانین محاسبه
+•	درخواست‌های Settled محدودیت تعداد درخواست را آزاد نمی‌کنند.
+•	درخواست‌های Soft Deleted نیز محدودیت تعداد درخواست را آزاد نمی‌کنند.
+•	درخواست‌های Settled سقف مبلغ تعهد فعال را آزاد می‌کنند.
+•	فقط درخواست‌های Active در سقف مبلغ تعهد محاسبه می‌شوند.
+•	سال محاسباتی براساس سال جلالی است.
+________________________________________
+20. رویدادها و اعلان‌ها
+الگوی پیشنهادی
+                                            content_copy                        text
+Domain Events + Outbox Pattern
+کانال‌های نسخه اول
+•	In-app Notification
+•	Email در صورت نیاز
+•	Internal Hook برای Audit و Jobها
+•	SSE برای اعلان زنده
+رویدادهای کلیدی
+                                            content_copy                        text
+UserCreated
+ItemCatalogCreated
+InventoryLowStock
+ItemRequestCreated
+ItemRequestApproved
+ItemRequestRejected
+ItemRequestFulfilled
+ItemReturned
+LoanRequestCreated
+LoanRequestActivated
+LoanRequestSettled
+AssetAssigned
+AssetReturned
+قانون مهم
+Failure در Notification نباید تراکنش اصلی را خراب کند، مگر اینکه آن Notification به‌صراحت Critical تعریف شده باشد.
+________________________________________
+21. Audit Logging
+عملیات نیازمند Audit
+•	ایجاد، ویرایش و غیرفعال‌سازی Employee
+•	تغییر نقش‌ها
+•	تغییر Scopeها
+•	ایجاد و ویرایش کالا
+•	تغییر موجودی
+•	هشدار کمبود موجودی
+•	ایجاد درخواست کالا
+•	تغییر وضعیت درخواست کالا
+•	ایجاد و تغییر وضعیت درخواست وام
+•	تغییر تنظیمات
+فیلدهای AuditLog
+                                            content_copy                        text
+id
+actor_user_id
+entity_type
+entity_id
+action
+before_snapshot
+after_snapshot
+trace_id
+created_at
+Masking
+فیلدهای حساس:
+                                            content_copy                        text
+national_id
+personnel_code
+loan data
+asset assignment data
+tokens
+credentials
+secrets
+قوانین:
+•	Token و Secret باید کامل Mask شوند.
+•	کد ملی فقط با چند رقم آخر نمایش داده شود.
+•	کد پرسنلی Partial نمایش داده شود.
+•	اطلاعات حساس در لاگ عمومی چاپ نشود.
+•	فقط نقش‌های مجاز بتوانند Snapshot کامل را ببینند.
+________________________________________
+22. مدل خطای استاندارد API
+تمام خطاهای API باید ساختار یکسان داشته باشند:
+                                            content_copy                        json
+{
+  "code": "INSUFFICIENT_STOCK",
+  "message": "Insufficient stock",
+  "details": {
+    "item_catalog_id": "uuid",
+    "available_quantity": 5,
+    "requested_quantity": 8
+  },
+  "trace_id": "uuid-or-correlation-id"
+}
+کدهای خطای پیشنهادی
+                                            content_copy                        text
+VALIDATION_ERROR
+AUTHENTICATION_REQUIRED
+AUTHORIZATION_DENIED
+RESOURCE_NOT_FOUND
+DUPLICATE_RESOURCE
+CONFLICT_CONCURRENT_UPDATE
+INSUFFICIENT_STOCK
+BUSINESS_RULE_VIOLATION
+RATE_LIMITED
+INTERNAL_ERROR
+STALE_VERSION
+RESOURCE_LOCKED
+________________________________________
+23. API Contract
+Base URL
+                                            content_copy                        text
+/api/v1
+قوانین API
+•	تمام List Endpointها باید Pagination داشته باشند.
+•	در موارد لازم Filter، Sort و Search پشتیبانی شود.
+•	پاسخ لیست‌ها ساختار ثابت داشته باشد.
+ساختار پاسخ لیست
+                                            content_copy                        json
+{
+  "items": [],
+  "page": 1,
+  "page_size": 20,
+  "total": 120
+}
+________________________________________
+24. Endpointهای اصلی پیشنهادی
+Auth
+                                            content_copy                        text
+POST   /api/v1/auth/login
+POST   /api/v1/auth/refresh
+POST   /api/v1/auth/logout
+GET    /api/v1/auth/me
+Employees
+                                            content_copy                        text
+GET    /api/v1/employees
+POST   /api/v1/employees
+GET    /api/v1/employees/{id}
+PATCH  /api/v1/employees/{id}
+POST   /api/v1/employees/{id}/deactivate
+Roles & Permissions
+                                            content_copy                        text
+GET    /api/v1/roles
+POST   /api/v1/roles
+PATCH  /api/v1/roles/{id}
+POST   /api/v1/users/{id}/roles
+GET    /api/v1/permissions
+POST   /api/v1/users/{id}/scopes
+Organization
+                                            content_copy                        text
+GET    /api/v1/organization/company
+GET    /api/v1/organization/complexes
+GET    /api/v1/organization/workplaces
+Item Catalog
+                                            content_copy                        text
+GET    /api/v1/warehouse/items
+POST   /api/v1/warehouse/items
+GET    /api/v1/warehouse/items/{id}
+PATCH  /api/v1/warehouse/items/{id}
+GET    /api/v1/warehouse/items/search
+Inventory
+                                            content_copy                        text
+GET    /api/v1/warehouse/inventory
+POST   /api/v1/warehouse/inventory/placements
+PATCH  /api/v1/warehouse/inventory/placements/{id}
+GET    /api/v1/warehouse/stock-movements
+Item Requests
+                                            content_copy                        text
+GET    /api/v1/warehouse/item-requests
+POST   /api/v1/warehouse/item-requests
+GET    /api/v1/warehouse/item-requests/{id}
+POST   /api/v1/warehouse/item-requests/{id}/approve
+POST   /api/v1/warehouse/item-requests/{id}/reject
+POST   /api/v1/warehouse/item-requests/{id}/fulfill
+Assets
+                                            content_copy                        text
+GET    /api/v1/assets
+POST   /api/v1/assets
+GET    /api/v1/assets/{id}
+POST   /api/v1/assets/{id}/assign
+POST   /api/v1/assets/{id}/return
+GET    /api/v1/assets/{id}/history
+Loans
+                                            content_copy                        text
+GET    /api/v1/loans/policies
+POST   /api/v1/loans/policies
+PATCH  /api/v1/loans/policies/{id}
+GET    /api/v1/loans/requests
+POST   /api/v1/loans/requests
+GET    /api/v1/loans/requests/{id}
+POST   /api/v1/loans/requests/{id}/activate
+POST   /api/v1/loans/requests/{id}/settle
+POST   /api/v1/loans/requests/{id}/cancel
+Notifications
+                                            content_copy                        text
+GET    /api/v1/notifications
+POST   /api/v1/notifications/{id}/read
+GET    /api/v1/notifications/stream
+Audit
+                                            content_copy                        text
+GET    /api/v1/audit-logs
+GET    /api/v1/audit-logs/{id}
+Settings
+                                            content_copy                        text
+GET    /api/v1/settings
+PATCH  /api/v1/settings/{key}
+Reports
+                                            content_copy                        text
+GET    /api/v1/reports/dashboard
+GET    /api/v1/reports/inventory
+GET    /api/v1/reports/item-requests
+GET    /api/v1/reports/loans
+GET    /api/v1/reports/export/excel
+________________________________________
+25. کنترل همزمانی
+برای جلوگیری از Race Condition، سیستم باید کنترل همزمانی داشته باشد.
+موجودیت‌های حساس
+•	InventoryPlacement
+•	StockMovement flow
+•	ItemRequest fulfillment
+•	Asset assignment / return
+•	LoanRequest status transitions
+•	Setting updates
+Optimistic Locking
+برای موجودیت‌های قابل ویرایش:
+                                            content_copy                        text
+version یا row_version
+در زمان Update باید نسخه فعلی بررسی شود.
+اگر نسخه ارسالی کاربر قدیمی باشد:
+                                            content_copy                        text
+STALE_VERSION
+یا:
+                                            content_copy                        text
+CONFLICT_CONCURRENT_UPDATE
+بازگردانده شود.
+Pessimistic Locking
+برای عملیات حساس موجودی:
+                                            content_copy                        sql
+SELECT ... FOR UPDATE
+باید استفاده شود.
+قوانین
+•	کاهش موجودی و ثبت StockMovement باید Atomic باشد.
+•	Fulfillment نباید موجودی منفی ایجاد کند.
+•	خطاهای همزمانی باید کد استاندارد داشته باشند.
+________________________________________
+26. Seed Data
+Seed باید از ابتدا طراحی شود.
+داده‌های لازم
+•	Company پایه
+•	Complexها
+•	Workplaceها
+•	Roleهای پایه
+•	Permissionهای پایه
+•	Scopeهای پایه
+•	Admin اولیه
+•	Settings پایه
+•	داده نمونه کالا برای Development
+قوانین Seed
+•	Idempotent باشد.
+•	اجرای چندباره باعث Duplicate نشود.
+•	Seed توسعه و Production جدا باشد.
+•	رمز Admin اولیه از Environment Variable خوانده شود.
+•	Production Default ناامن ممنوع است.
+________________________________________
+27. استراتژی تست
+Unit Test
+برای:
+•	Serviceها
+•	قوانین کسب‌وکار
+•	Validatorها
+•	Scope Resolution
+•	Loan Validation Cascade
+•	Low Stock Logic
+Integration Test
+برای:
+•	Repositoryها
+•	Scope Filterها
+•	Transaction Boundaryها
+•	Outbox
+•	API Endpointها
+•	Constraintهای دیتابیس
+•	Partial Unique Indexها
+End-to-End Test
+برای Flowهای حیاتی:
+•	ایجاد Employee + User
+•	Assign Role و Scope
+•	افزودن موجودی و ثبت StockMovement
+•	درخواست کالا تا Fulfillment
+•	هشدار Low Stock و Notification
+•	درخواست وام و اعتبارسنجی کامل
+•	دریافت اعلان زنده
+________________________________________
+28. الزامات غیرعملکردی
+Performance
+•	P95 APIهای معمولی کمتر از 200ms
+•	P95 داشبورد کمتر از 500ms
+•	جستجوی کالا باید سریع و روان باشد
+•	اعلان داخلی در شرایط عادی کمتر از 5 ثانیه ارسال شود
+Reliability
+•	Audit عملیات حساس باید 100٪ ثبت شود.
+•	تمام خطاها trace_id داشته باشند.
+•	Outbox از گم‌شدن رویدادها جلوگیری کند.
+Security
+•	HTTPS در Production
+•	Masking داده حساس
+•	اعتبارسنجی کامل در Backend
+•	محافظت در برابر CSRF
+•	محافظت در برابر XSS
+•	محافظت در برابر SQL Injection
+•	عدم ذخیره Secret در دیتابیس
+•	عدم چاپ Secret در Logها
+Observability
+•	Trace مشترک بین Frontend، Backend و Worker
+•	Metrics
+•	Logs
+•	Error Tracking
+•	Correlation ID / Trace ID
+________________________________________
+29. ساختار پیشنهادی پروژه
+29.1 ساختار کلی Repository
+                                            content_copy                        text
+enterprise-system/
+├── backend/
+├── frontend/
+├── infra/
+├── docs/
+├── scripts/
+├── .github/
+├── .env.example
+├── README.md
+├── CHANGELOG.md
+└── VERSION
+________________________________________
+29.2 ساختار Backend
+                                            content_copy                        text
+backend/
+├── app/
+│   ├── main.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── security.py
+│   │   ├── errors.py
+│   │   ├── logging.py
+│   │   ├── tracing.py
+│   │   └── database.py
+│   ├── common/
+│   │   ├── mixins.py
+│   │   ├── pagination.py
+│   │   ├── schemas.py
+│   │   ├── scope.py
+│   │   └── audit.py
+│   ├── modules/
+│   │   ├── user/
+│   │   │   ├── models.py
+│   │   │   ├── schemas.py
+│   │   │   ├── repository.py
+│   │   │   ├── service.py
+│   │   │   ├── router.py
+│   │   │   ├── contracts.py
+│   │   │   └── tests/
+│   │   ├── warehouse/
+│   │   ├── loan/
+│   │   ├── notification/
+│   │   ├── audit/
+│   │   └── settings/
+│   ├── workers/
+│   │   ├── celery_app.py
+│   │   └── tasks.py
+│   └── seeds/
+│       ├── seed_dev.py
+│       └── seed_prod.py
+├── alembic/
+├── tests/
+├── pyproject.toml
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
+________________________________________
+29.3 ساختار Frontend
+                                            content_copy                        text
+frontend/
+├── app/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── login/
+│   ├── dashboard/
+│   ├── employees/
+│   ├── warehouse/
+│   ├── loans/
+│   ├── assets/
+│   ├── notifications/
+│   ├── audit/
+│   └── settings/
+├── components/
+│   ├── ui/
+│   ├── forms/
+│   ├── tables/
+│   └── layout/
+├── features/
+│   ├── employees/
+│   ├── warehouse/
+│   ├── loans/
+│   ├── assets/
+│   ├── notifications/
+│   └── settings/
+├── lib/
+│   ├── api.ts
+│   ├── auth.ts
+│   ├── query-client.ts
+│   ├── validators.ts
+│   └── permissions.ts
+├── hooks/
+├── types/
+├── public/
+├── package.json
+├── tsconfig.json
+└── README.md
+________________________________________
+30. متغیرهای محیطی موردنیاز
+Backend .env
+                                            content_copy                        env
+APP_ENV=development
+APP_NAME=enterprise-system
+APP_VERSION=0.1.0
+DEBUG=true
+
+API_V1_PREFIX=/api/v1
+
+DATABASE_HOST=127.0.0.1
+DATABASE_PORT=5432
+DATABASE_NAME=enterprise_db
+DATABASE_USER=enterprise_user
+DATABASE_PASSWORD=change_me
+DATABASE_URL=postgresql+psycopg://enterprise_user:change_me@127.0.0.1:5432/enterprise_db
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_URL=redis://127.0.0.1:6379/0
+
+JWT_SECRET_KEY=change_me_secure_value
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+COOKIE_SECURE=false
+COOKIE_HTTPONLY=true
+COOKIE_SAMESITE=lax
+
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+INITIAL_ADMIN_EMAIL=admin@example.com
+INITIAL_ADMIN_USERNAME=admin
+INITIAL_ADMIN_PASSWORD=change_me_now
+
+SENTRY_DSN=
+OTEL_EXPORTER_OTLP_ENDPOINT=
+LOG_LEVEL=INFO
+نکته مهم: در کد نباید مقدار localhost یا 127.0.0.1 hardcode شود. این‌ها فقط در .env توسعه قرار می‌گیرند.
+________________________________________
+Frontend .env.local
+                                            content_copy                        env
+NEXT_PUBLIC_APP_NAME=Enterprise System
+NEXT_PUBLIC_APP_VERSION=0.1.0
+
+NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
+BACKEND_API_BASE_URL=http://127.0.0.1:8000/api/v1
+
+NEXT_PUBLIC_NOTIFICATION_SSE_URL=http://127.0.0.1:8000/api/v1/notifications/stream
+________________________________________
+31. راه‌اندازی پروژه از صفر روی Windows بدون Docker
+31.1 پیش‌نیازها
+روی سیستم نصب شود:
+•	Python 3.12+
+•	Node.js LTS
+•	PostgreSQL 16+
+•	Redis for Windows یا Redis روی WSL/VM
+•	Git
+•	VS Code
+•	pgAdmin یا DBeaver
+________________________________________
+31.2 ایجاد Repository
+                                            content_copy                        bash
+mkdir enterprise-system
+cd enterprise-system
+git init
+ساختار اولیه:
+                                            content_copy                        bash
+mkdir backend frontend infra docs scripts
+echo "# Enterprise System" > README.md
+echo "0.1.0" > VERSION
+echo "# Changelog" > CHANGELOG.md
+________________________________________
+31.3 راه‌اندازی Backend
+                                            content_copy                        bash
+cd backend
+python -m venv .venv
+فعال‌سازی venv در PowerShell:
+                                            content_copy                        powershell
+.\.venv\Scripts\Activate.ps1
+نصب وابستگی‌ها:
+                                            content_copy                        bash
+pip install fastapi uvicorn sqlalchemy alembic psycopg[binary] pydantic pydantic-settings python-jose passlib[bcrypt] redis celery pytest pytest-asyncio httpx
+ذخیره وابستگی‌ها:
+                                            content_copy                        bash
+pip freeze > requirements.txt
+اجرای اولیه FastAPI:
+                                            content_copy                        bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+________________________________________
+31.4 راه‌اندازی دیتابیس PostgreSQL
+ایجاد دیتابیس:
+                                            content_copy                        sql
+CREATE DATABASE enterprise_db;
+CREATE USER enterprise_user WITH PASSWORD 'change_me';
+GRANT ALL PRIVILEGES ON DATABASE enterprise_db TO enterprise_user;
+________________________________________
+31.5 راه‌اندازی Migration
+                                            content_copy                        bash
+alembic init alembic
+سپس اتصال Alembic به SQLAlchemy Metadata انجام شود.
+اجرای Migration:
+                                            content_copy                        bash
+alembic revision --autogenerate -m "initial schema"
+alembic upgrade head
+________________________________________
+31.6 راه‌اندازی Frontend
+                                            content_copy                        bash
+cd ../frontend
+npx create-next-app@latest .
+انتخاب‌ها:
+                                            content_copy                        text
+TypeScript: Yes
+ESLint: Yes
+Tailwind CSS: Yes
+App Router: Yes
+src directory: Optional
+نصب پکیج‌های لازم:
+                                            content_copy                        bash
+npm install @tanstack/react-query react-hook-form zod @hookform/resolvers
+نصب shadcn/ui:
+                                            content_copy                        bash
+npx shadcn@latest init
+اجرای Frontend:
+                                            content_copy                        bash
+npm run dev
+________________________________________
+32. راه‌اندازی روی VM بدون Docker
+برای VM ساده‌ترین ترکیب اولیه:
+                                            content_copy                        text
+Ubuntu Server
+PostgreSQL
+Redis
+Backend FastAPI با systemd
+Frontend Next.js با systemd یا build static/server
+Nginx Reverse Proxy
+Certbot برای HTTPS
+سرویس‌های لازم روی VM
+•	enterprise-backend.service
+•	enterprise-celery.service
+•	enterprise-frontend.service
+•	nginx
+Nginx
+مسیرها:
+                                            content_copy                        text
+/           → frontend:3000
+/api/v1     → backend:8000
+________________________________________
+33. برنامه Dockerization برای آینده
+بعد از پایدار شدن توسعه Local، Docker اضافه شود.
+فایل‌های لازم
+                                            content_copy                        text
+backend/Dockerfile
+frontend/Dockerfile
+infra/docker-compose.yml
+infra/nginx/nginx.conf
+سرویس‌های Docker Compose
+                                            content_copy                        yaml
+postgres
+redis
+backend
+frontend
+celery_worker
+nginx
+قانون مهم
+چون از ابتدا تنظیمات Environment-driven هستند، مهاجرت از Local/VM به Docker ساده خواهد بود.
+________________________________________
+34. کنترل نسخه و Git Versioning
+34.1 Branching Model پیشنهادی
+برای این پروژه، مدل ساده و قابل مدیریت پیشنهاد می‌شود:
+                                            content_copy                        text
+main
+develop
+feature/*
+fix/*
+release/*
+hotfix/*
+توضیح Branchها
+content_copy 
+Branch	کاربرد
+main	نسخه پایدار قابل Deploy
+develop	توسعه فعال
+feature/*	قابلیت جدید
+fix/*	رفع باگ غیراضطراری
+release/*	آماده‌سازی نسخه انتشار
+hotfix/*	رفع فوری روی نسخه Production
+________________________________________
+34.2 قالب نام‌گذاری Branch
+                                            content_copy                        text
+feature/user-employee-management
+feature/warehouse-item-catalog
+feature/loan-policy-validation
+fix/inventory-scope-filter
+hotfix/auth-token-rotation
+release/v0.1.0
+________________________________________
+34.3 قالب Commit Message
+استفاده از Conventional Commits پیشنهاد می‌شود:
+                                            content_copy                        text
+type(scope): message
+نمونه‌ها:
+                                            content_copy                        text
+feat(user): add employee creation service
+feat(warehouse): implement item catalog search
+fix(auth): correct refresh token rotation
+refactor(scope): simplify scope resolver
+test(loan): add validation cascade tests
+docs(setup): add windows development guide
+chore(deps): pin backend dependencies
+Typeهای مجاز
+                                            content_copy                        text
+feat
+fix
+docs
+style
+refactor
+test
+chore
+ci
+build
+perf
+security
+________________________________________
+34.4 Versioning
+استفاده از Semantic Versioning:
+                                            content_copy                        text
+MAJOR.MINOR.PATCH
+مثال:
+                                            content_copy                        text
+0.1.0
+0.2.0
+1.0.0
+1.0.1
+معنی نسخه‌ها
+content_copy 
+بخش	معنی
+MAJOR	تغییرات ناسازگار یا انتشار اصلی
+MINOR	قابلیت جدید بدون شکستن سازگاری
+PATCH	رفع باگ
+________________________________________
+34.5 قالب Tag
+                                            content_copy                        text
+v0.1.0
+v0.2.0
+v1.0.0
+ساخت Tag:
+                                            content_copy                        bash
+git tag -a v0.1.0 -m "Release version 0.1.0"
+git push origin v0.1.0
+________________________________________
+34.6 قالب CHANGELOG
+                                            content_copy                        md
+# Changelog
+
+## [0.1.0] - 2026-07-18
+
+### Added
+- Initial backend project structure
+- Initial frontend project structure
+- User module base models
+- Warehouse item catalog base models
+
+### Changed
+- None
+
+### Fixed
+- None
+
+### Security
+- Added environment-based secret loading
+________________________________________
+35. معیارهای موفقیت نسخه اول
+نسخه اول زمانی موفق است که:
+•	مدیریت کاربران و کارکنان با RBAC و Scope درست کار کند.
+•	ایجاد Employee و User در یک تراکنش انجام شود.
+•	ثبت کد ملی و کد پرسنلی تکراری غیرممکن باشد.
+•	کالاهای تکراری ایجاد نشوند.
+•	جستجوی زنده کالا سریع و قابل استفاده باشد.
+•	موجودی در سطح قفسه و Placement مدیریت شود.
+•	هر تغییر موجودی StockMovement داشته باشد.
+•	درخواست کالا از ایجاد تا Fulfillment کامل کار کند.
+•	Low Stock Alert ایجاد و ارسال شود.
+•	دارایی‌ها قابل ردیابی باشند.
+•	درخواست وام براساس سیاست Workplace اعتبارسنجی شود.
+•	عملیات حساس 100٪ Audit شوند.
+•	داده‌های حساس Mask شوند.
+•	خطاها ساختار استاندارد و trace_id داشته باشند.
+•	سیستم روی VM قابل Deploy باشد.
+________________________________________
+36. ریسک‌های مهم پروژه و راهکار کاهش ریسک
+ریسک 1: پیچیدگی Scope و Authorization
+راهکار
+•	پیاده‌سازی Scope Resolver مرکزی
+•	تست Unit و Integration گسترده
+•	ممنوعیت Query بدون Scope Filter
+•	تعریف Permission و Scope از ابتدا در Seed
+________________________________________
+ریسک 2: Race Condition در موجودی
+راهکار
+•	استفاده از Row Locking برای کاهش موجودی
+•	Atomic بودن Fulfillment و StockMovement
+•	Constraint برای جلوگیری از موجودی منفی
+•	تست همزمانی
+________________________________________
+ریسک 3: ثبت داده تکراری
+راهکار
+•	Unique Index در دیتابیس
+•	جستجوی زنده در UI
+•	Validation در Service
+•	کنترل خطای Duplicate در API
+________________________________________
+ریسک 4: نشت داده حساس
+راهکار
+•	Masking مرکزی
+•	عدم چاپ Secretها در Log
+•	کنترل Export
+•	سطح‌بندی داده‌ها
+•	Authorization دقیق
+________________________________________
+ریسک 5: پیچیدگی زودهنگام Docker
+راهکار
+•	شروع Local/VM بدون Docker
+•	Environment-driven بودن همه تنظیمات
+•	عدم Hardcode
+•	Dockerization پس از پایدار شدن MVP
+________________________________________
+37. اولویت‌های پیاده‌سازی پیشنهادی بدون تقسیم‌بندی فازی رسمی
+برای تبدیل پروژه به محصول، اولویت منطقی پیاده‌سازی این است:
+1.	آماده‌سازی ساختار Repository
+2.	تنظیم Backend پایه
+3.	تنظیم Frontend پایه
+4.	اتصال PostgreSQL و Alembic
+5.	پیاده‌سازی Config و Environment
+6.	تعریف Mixins و Base Models
+7.	پیاده‌سازی Auth
+8.	پیاده‌سازی Organization Seed
+9.	پیاده‌سازی User Module
+10.	پیاده‌سازی RBAC + Scope
+11.	پیاده‌سازی Audit پایه
+12.	پیاده‌سازی Warehouse ItemCatalog
+13.	پیاده‌سازی InventoryPlacement و StockMovement
+14.	پیاده‌سازی Item Request
+15.	پیاده‌سازی Notification و Outbox
+16.	پیاده‌سازی Loan Policy و Loan Request
+17.	پیاده‌سازی Asset Tracking
+18.	پیاده‌سازی Settings
+19.	پیاده‌سازی Reports و Export
+20.	تکمیل تست‌ها
+21.	آماده‌سازی Deploy روی VM
+22.	Dockerization در مرحله بعد
+________________________________________
+38. خروجی‌های نهایی موردنیاز برای شروع واقعی پروژه
+برای اینکه این پرامپت به محصول قابل پیاده‌سازی تبدیل شود، باید خروجی‌های زیر تولید شوند:
+1.	ساختار دقیق Frontend و Backend
+2.	ERD یا Schema دیتابیس
+3.	مدل‌های SQLAlchemy
+4.	Migrationهای Alembic
+5.	DTOها و Schemaهای Pydantic
+6.	Endpointهای FastAPI
+7.	Service Layer برای هر ماژول
+8.	Repository Layer با Scope Filter اجباری
+9.	سیستم Auth و Refresh Token
+10.	RBAC و Scope Resolver
+11.	Audit Logger
+12.	Event Outbox
+13.	Notification داخلی
+14.	Seedهای Dev و Production
+15.	تست‌های Unit و Integration
+16.	راهنمای اجرای Local روی Windows
+17.	راهنمای Deploy روی VM
+18.	فایل‌های .env.example
+19.	قالب Git Branching و Versioning
+20.	مستند API
+21.	برنامه Dockerization آینده
+________________________________________
+39. جمع‌بندی تصمیم‌های کلیدی
+تصمیم‌های مهمی که باید در پروژه ثابت بمانند:
+                                            content_copy                        text
+Architecture: Modular Monolith
+Backend: FastAPI
+Frontend: Next.js
+Database: PostgreSQL
+ORM: SQLAlchemy 2.0
+Migration: Alembic
+Queue/Cache: Redis + Celery
+Auth: JWT + HttpOnly Cookie + BFF
+Authorization: RBAC + Scope
+Primary Keys: UUID
+Deletion: Soft Delete
+Audit: Mandatory for sensitive operations
+Config: Environment-driven
+Initial Deployment: Local/VM
+Docker: Later
+Versioning: Semantic Versioning
+Git Commit Style: Conventional Commits
