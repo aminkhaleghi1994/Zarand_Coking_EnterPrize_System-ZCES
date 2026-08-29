@@ -16,11 +16,14 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 1 complete (Foundation Skeleton)** — backend platform (config,
-logging + trace correlation, standard error envelope, `/healthz`), frontend
-scaffold (bilingual EN/FA, RTL, DESIGN.md tokens, Kalameh fonts, login shell,
-BFF health proxy), Alembic baseline + shared entity mixins, bring-up scripts,
-CI. Phases 2–11 run sequentially; next: `auth-rbac-scope-platform`.
+**Phase 2 complete (Auth, RBAC & Scope Platform)** — on top of the Phase 1
+foundation: login/logout/me with JWT access tokens and rotating refresh
+tokens (DB-backed families, reuse detection revokes the whole family),
+HttpOnly cookies owned by the BFF, double-submit CSRF, RBAC + hierarchical
+scope resolver (permission AND scope, union, implicit deny, Global >
+Complex > Workplace), append-only audit base with masking, idempotent
+seeds (initial admin + 7 base roles). Phases 3–11 run sequentially; next:
+`org-user-module`.
 
 ## Quick start (Windows PowerShell)
 
@@ -47,10 +50,16 @@ CI. Phases 2–11 run sequentially; next: `auth-rbac-scope-platform`.
    .\scripts\dev-frontend.ps1    # npm install → next dev :3000
    ```
 
-4. Verify the phase gate:
+4. Seed the initial admin + base roles (idempotent, credentials from `backend\.env`):
 
    ```powershell
-   .\scripts\smoke-test.ps1      # healthz, DB up, BFF proxy, EN/FA, error envelope, trace ids
+   cd backend; .\.venv\Scripts\python.exe -m app.seeds.seed_dev
+   ```
+
+5. Verify the phase gates:
+
+   ```powershell
+   .\scripts\smoke-test.ps1      # healthz, DB, BFF, EN/FA, error envelope, trace ids, auth
    ```
 
 ## Repository layout

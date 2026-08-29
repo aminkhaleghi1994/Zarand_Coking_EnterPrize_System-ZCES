@@ -28,6 +28,10 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://zces_user:zces_dev_pw@127.0.0.1:5432/zces_dev
+      JWT_SECRET_KEY: ci-only-secret-key-0123456789abcdef
+      INITIAL_ADMIN_EMAIL: admin@zarandsteel.ir
+      INITIAL_ADMIN_USERNAME: admin
+      INITIAL_ADMIN_PASSWORD: ci-admin-password-2026
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -99,6 +99,54 @@ Check "missing X-Request-ID gets generated" {
     Assert-True ($value -match "^[0-9a-fA-F-]{36}$") "generated X-Request-ID is not a UUID"
 }
 
+# --- Auth checks (Phase 2) ---
+
+$script:adminEmail = Get-EnvValue (Join-Path $repoRoot "backend\.env") "INITIAL_ADMIN_EMAIL"
+$script:adminPassword = Get-EnvValue (Join-Path $repoRoot "backend\.env") "INITIAL_ADMIN_PASSWORD"
+
+Check "backend login returns token pair without leaking secrets" {
+    Assert-True ($null -ne $script:adminEmail -and $null -ne $script:adminPassword) "INITIAL_ADMIN_* not configured in backend\.env"
+    $payload = @{ email = $script:adminEmail; password = $script:adminPassword } | ConvertTo-Json
+    $response = Invoke-WebRequest -Uri "$backendUrl/auth/login" -Method POST -Body $payload -ContentType "application/json" -UseBasicParsing -TimeoutSec 15
+    Assert-True ($response.StatusCode -eq 200) "expected 200, got $($response.StatusCode)"
+    $body = $response.Content | ConvertFrom-Json
+    Assert-True ($null -ne $body.access_token -and $body.access_token -ne "") "access_token missing"
+    Assert-True ($null -ne $body.refresh_token -and $body.refresh_token -ne "") "refresh_token missing"
+    Assert-True ($body.roles -contains "SuperAdmin") "admin lacks SuperAdmin role"
+    Assert-True ($response.Content -notmatch $script:adminPassword) "password leaked in login response"
+}
+
+Check "wrong password is rejected generically" {
+    $payload = @{ email = $script:adminEmail; password = "definitely-wrong-1" } | ConvertTo-Json
+    $client = New-Object System.Net.Http.HttpClient
+    $client.Timeout = [TimeSpan]::FromSeconds(15)
+    try {
+        $content = New-Object System.Net.Http.StringContent($payload, [System.Text.Encoding]::UTF8, "application/json")
+        $httpResponse = $client.PostAsync("$backendUrl/auth/login", $content).GetAwaiter().GetResult()
+        $status = [int]$httpResponse.StatusCode
+        $bodyText = $httpResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    }
+    finally {
+        $client.Dispose()
+    }
+    Assert-True ($status -eq 401) "expected 401, got $status"
+    $body = $bodyText | ConvertFrom-Json
+    Assert-True ($body.code -eq "AUTHENTICATION_REQUIRED") "error code is not AUTHENTICATION_REQUIRED"
+}
+
+Check "admin endpoint denies unauthenticated request with 401" {
+    $client = New-Object System.Net.Http.HttpClient
+    $client.Timeout = [TimeSpan]::FromSeconds(10)
+    try {
+        $response = $client.GetAsync("$backendUrl/users").GetAwaiter().GetResult()
+        $status = [int]$response.StatusCode
+    }
+    finally {
+        $client.Dispose()
+    }
+    Assert-True ($status -eq 401) "expected 401, got $status"
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red

@@ -3,6 +3,51 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.2.0] - 2026-08-29
+
+### Added
+- Authentication (Phase 2): login/logout/me with short-lived JWT access
+  tokens (PyJWT) and rotating opaque refresh tokens (bcrypt hashing for
+  passwords, SHA-256 hashing for refresh tokens) backed by DB refresh-token
+  families — replay of a rotated/revoked token revokes the entire family and
+  forces re-authentication; generic auth errors prevent user enumeration
+- Authorization: RBAC entities (roles, permissions, role_permissions,
+  user_roles) plus hierarchical scope assignments (Global > Complex >
+  Workplace) and a central pure resolver — permission AND scope required,
+  union across assignments, implicit deny; 18-case resolver unit suite;
+  `require_permission` FastAPI dependency (401 before 403)
+- Audit base: append-only `audit_logs` (actor, entity, action, masked
+  before/after snapshots, trace_id) with critical-vs-deferred durability
+  (auth events transactional, others tolerate failure); central masking
+  helpers (email, identifiers, secrets) applied at write time
+- Migration `0002_auth_rbac_scope`: 8 tables with UUID PKs, partial unique
+  indexes on active rows, CHECK-constrained enums (reversible)
+- Idempotent seeds: 7 base roles, base permission set, initial admin from
+  environment (dev seed safe to re-run; prod seed refuses unsafe/default
+  admin passwords)
+- Admin endpoints (permission-guarded, audited): roles, permissions, users,
+  role/scope assignment + revocation, paginated audit log with
+  snapshot-visibility gating (`audit:log:read_full`)
+- Frontend session plumbing (Phase 2): BFF-owned HttpOnly cookies
+  (`zces_at`, `zces_rt`) + readable CSRF cookie with double-submit header
+  validation on mutations; `/api/auth/{login,logout,refresh,me}` route
+  handlers; transparent renewal via `GET /api/auth/refresh?next=…` with
+  post-refresh identity validation; server-side layout guard redirecting
+  unauthenticated visitors (destination preserved via middleware for cold
+  navigation); login form wired to real authentication; identity (email +
+  roles) and logout control in the app chrome; localized session-expired
+  and auth error messages (EN/FA)
+- Route-group restructure: `(app)` guarded shell vs `(auth)` login surface
+- Smoke test extended with auth checks (login shape, generic rejection,
+  401 enforcement) — 11 checks total
+- CI: seed/admin env for backend job; auth + resolver + seed-idempotency
+  tests run against PostgreSQL 16 service container
+
+### Changed
+- Backend deps: added PyJWT, bcrypt, email-validator; requirements floors
+  updated
+- README quick start: seed step + auth smoke checks; VERSION → 0.2.0
+
 ## [0.1.0] - 2026-08-29
 
 ### Added
