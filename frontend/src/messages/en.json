@@ -16,7 +16,55 @@
     "loans": "Loans",
     "reports": "Reports",
     "settings": "Settings",
-    "menu": "Menu"
+    "menu": "Menu",
+    "groups": {
+      "operations": "Operations",
+      "system": "System"
+    },
+    "comingSoon": "Coming soon",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation"
+  },
+  "dashboard": {
+    "eyebrow": "Operations Console",
+    "welcome": "Welcome back",
+    "identityHint": "Signed in as {email}",
+    "rolesLabel": "Roles",
+    "statusTitle": "Platform status",
+    "statusDescription": "Live health of the platform services, refreshed every 30 seconds.",
+    "modulesTitle": "Modules",
+    "modulesDescription": "Everything you manage, in one console. More modules ship with every phase.",
+    "modules": {
+      "employees": {
+        "title": "Employees",
+        "description": "Records, user accounts, roles and scope assignment."
+      },
+      "warehouse": {
+        "title": "Warehouse",
+        "description": "Item catalog, shelf placements and stock movements."
+      },
+      "assets": {
+        "title": "Assets",
+        "description": "Asset instances, assignment and return history."
+      },
+      "loans": {
+        "title": "Loans & Guarantees",
+        "description": "Loan policies, requests and validation rules."
+      },
+      "reports": {
+        "title": "Reports",
+        "description": "Inventory, requests, loans and audit exports."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Feature flags and system configuration."
+      }
+    },
+    "phaseBadge": "Phase {phase}",
+    "version": "Version"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content"
   },
   "home": {
     "eyebrow": "Zarand Coking & Steel",
@@ -45,6 +93,8 @@
     "forgot": "Forgot password?",
     "sessionExpired": "Your session has expired. Please sign in again.",
     "formInvalid": "Please fix the highlighted fields and try again.",
+    "secureNote": "Authorized personnel only.",
+    "backHome": "Back to home",
     "errors": {
       "emailRequired": "Email is required.",
       "emailInvalid": "Enter a valid email address.",

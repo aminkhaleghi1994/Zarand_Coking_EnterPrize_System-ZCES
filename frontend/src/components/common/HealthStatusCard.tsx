@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type HealthPayload = {
   status: string;
@@ -28,45 +28,67 @@ export function HealthStatusCard() {
     refetchInterval: 30_000,
   });
 
+  const backendUp = !isPending && !isError && data.status === "ok";
+  const databaseUp = !isPending && !isError && data.components.database?.status === "up";
+  const latency = data?.components.database?.latency_ms;
+
   return (
-    <Card className="w-full max-w-md shadow-soft-lift">
-      <CardHeader>
-        <CardTitle className="text-xl font-bold">{t("healthTitle")}</CardTitle>
-        <CardDescription className="text-graphite">{t("healthDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3 text-sm">
-        {isPending ? (
-          <>
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-6 w-56" />
-            <Skeleton className="h-6 w-48" />
-          </>
-        ) : isError ? (
-          <p className="font-bold text-bloom-deep">{t("statusDown")}</p>
-        ) : (
-          <>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-charcoal">{t("backend")}</span>
-              <span className="flex items-center gap-2 font-bold">
-                <StatusDot up={data.status === "ok"} />
-                {data.status === "ok" ? t("statusUp") : t("statusDown")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-charcoal">{t("database")}</span>
-              <span className="flex items-center gap-2 font-bold">
-                <StatusDot up={data.components.database?.status === "up"} />
-                {data.components.database?.status === "up" ? t("statusUp") : t("statusDown")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-charcoal">v</span>
-              <span className="font-bold">{data.version}</span>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <div
+      aria-busy={isPending}
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+    >
+      <StatusTile
+        label={t("backend")}
+        pending={isPending}
+        up={backendUp}
+        detail={isError ? t("statusDown") : backendUp ? t("statusUp") : undefined}
+      />
+      <StatusTile
+        label={t("database")}
+        pending={isPending}
+        up={databaseUp}
+        detail={
+          isError
+            ? t("statusDown")
+            : databaseUp
+              ? latency != null
+                ? t("latency", { ms: latency })
+                : t("statusUp")
+              : undefined
+        }
+      />
+      <StatusTile
+        label={t("version")}
+        pending={isPending}
+        detail={isError ? undefined : data?.version}
+      />
+    </div>
+  );
+}
+
+function StatusTile({
+  label,
+  detail,
+  pending,
+  up,
+}: {
+  label: string;
+  detail?: string;
+  pending: boolean;
+  up?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-fog bg-canvas p-5 shadow-soft-lift">
+      <p className="text-sm text-charcoal">{label}</p>
+      {pending ? (
+        <Skeleton className="mt-2 h-6 w-28" />
+      ) : (
+        <p className="mt-1 flex items-center gap-2 text-lg font-bold">
+          {up !== undefined && <StatusDot up={up} />}
+          <span className={cn(up === false && "text-bloom-deep")}>{detail ?? "—"}</span>
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -74,7 +96,10 @@ function StatusDot({ up }: { up: boolean }) {
   return (
     <span
       aria-hidden
-      className={`inline-block size-2 rounded-full ${up ? "bg-brand" : "bg-bloom-deep"}`}
+      className={cn(
+        "inline-block size-2.5 shrink-0 rounded-full",
+        up ? "bg-brand" : "bg-bloom-deep",
+      )}
     />
   );
 }

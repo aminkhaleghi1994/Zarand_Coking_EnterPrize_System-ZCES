@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocale, useTranslations } from "next-intl";
@@ -12,11 +12,19 @@ import { Label } from "@/components/ui/label";
 import { ErrorEnvelopeSchema } from "@/lib/schemas";
 import { loginSchema, type LoginValues } from "@/lib/validators";
 
+const STANDARD_ERROR_CODES = [
+  "AUTHENTICATION_REQUIRED",
+  "VALIDATION_ERROR",
+  "INTERNAL_ERROR",
+  "RATE_LIMITED",
+] as const;
+
 export function LoginForm({ nextPath }: { nextPath?: string }) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -27,6 +35,15 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
     mode: "onBlur",
     defaultValues: { email: "", password: "", remember: false },
   });
+
+  const hasFieldErrors = Object.keys(errors).length > 0;
+  const showSummary = submitError !== null || hasFieldErrors;
+
+  useEffect(() => {
+    if (submitError !== null) {
+      summaryRef.current?.focus();
+    }
+  }, [submitError]);
 
   const onSubmit = async (values: LoginValues) => {
     setSubmitError(null);
@@ -45,22 +62,34 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
 
     const body: unknown = await response.json().catch(() => null);
     const envelope = ErrorEnvelopeSchema.safeParse(body);
-    if (envelope.success) {
-      const code = envelope.data.code;
-      setSubmitError(
-        isStandardError(code) ? t(`errors.codes.${code}`) : t("errors.unexpected"),
-      );
-    } else {
-      setSubmitError(t("errors.unexpected"));
-    }
+    const code = envelope.success ? envelope.data.code : null;
+    setSubmitError(
+      code && STANDARD_ERROR_CODES.includes(code as (typeof STANDARD_ERROR_CODES)[number])
+        ? t(`errors.codes.${code}`)
+        : t("errors.unexpected"),
+    );
   };
 
-  const isStandardError = (code: string): boolean =>
-    code === "AUTHENTICATION_REQUIRED" || code === "VALIDATION_ERROR" ||
-    code === "INTERNAL_ERROR" || code === "RATE_LIMITED";
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-5">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="grid gap-5"
+      aria-busy={isSubmitting}
+    >
+      <div
+        ref={summaryRef}
+        tabIndex={-1}
+        role={showSummary ? "alert" : undefined}
+        className="grid gap-1 rounded-md p-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        {showSummary && (
+          <p className="text-sm font-bold text-bloom-deep">
+            {submitError ?? t("login.formInvalid")}
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-2">
         <Label htmlFor="login-email">{t("login.email")}</Label>
         <Input
@@ -70,9 +99,10 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
           placeholder={t("login.emailPlaceholder")}
           className="h-11 rounded-md"
           aria-invalid={errors.email ? "true" : undefined}
+          aria-describedby={errors.email ? "login-email-error" : undefined}
           {...register("email")}
         />
-        <FieldError message={errors.email ? t(errors.email.message as never) : undefined} />
+        <FieldError id="login-email-error" message={errors.email ? t(errors.email.message as never) : undefined} />
       </div>
 
       <div className="grid gap-2">
@@ -84,16 +114,10 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
           placeholder={t("login.passwordPlaceholder")}
           className="h-11 rounded-md"
           aria-invalid={errors.password ? "true" : undefined}
+          aria-describedby={errors.password ? "login-password-error" : undefined}
           {...register("password")}
         />
-        <FieldError message={errors.password ? t(errors.password.message as never) : undefined} />
-      </div>
-
-      <div aria-live="polite" className="min-h-6 text-sm">
-        {submitError && <p className="text-bloom-deep">{submitError}</p>}
-        {Object.keys(errors).length > 0 && !submitError && (
-          <p className="text-bloom-deep">{t("login.formInvalid")}</p>
-        )}
+        <FieldError id="login-password-error" message={errors.password ? t(errors.password.message as never) : undefined} />
       </div>
 
       <Button
@@ -107,9 +131,13 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
   );
 }
 
-function FieldError({ message }: { message?: string }) {
+function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) {
     return null;
   }
-  return <p className="text-sm text-bloom-deep">{message}</p>;
+  return (
+    <p id={id} className="text-sm text-bloom-deep">
+      {message}
+    </p>
+  );
 }
