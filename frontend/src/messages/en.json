@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "ZCES",
+    "fullName": "Zarand Coking Enterprise System",
+    "tagline": "One integrated platform for people, warehouse, assets and loans."
+  },
+  "utilityStrip": {
+    "forBusiness": "For Business",
+    "signIn": "Sign in"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "warehouse": "Warehouse",
+    "assets": "Assets",
+    "loans": "Loans",
+    "reports": "Reports",
+    "settings": "Settings",
+    "menu": "Menu"
+  },
+  "home": {
+    "eyebrow": "Zarand Coking & Steel",
+    "title": "Enterprise operations, unified.",
+    "description": "Employees, inventory, item requests, assets, loans and audit — one secure, bilingual system with full traceability.",
+    "cta": "Sign in to get started",
+    "healthTitle": "Platform status",
+    "healthDescription": "Live health of the backend platform, proxied through the BFF layer.",
+    "statusUp": "Operational",
+    "statusDown": "Unreachable",
+    "statusChecking": "Checking…",
+    "database": "Database",
+    "backend": "Backend",
+    "latency": "{ms} ms"
+  },
+  "login": {
+    "title": "Sign in",
+    "description": "Use your organizational account.",
+    "email": "Email",
+    "emailPlaceholder": "you@zarandsteel.ir",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "remember": "Keep me signed in",
+    "forgot": "Forgot password?",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "formInvalid": "Please fix the highlighted fields and try again.",
+    "errors": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordShort": "Password must be at least 8 characters."
+    }
+  },
+  "auth": {
+    "logout": "Sign out",
+    "loggingOut": "Signing out…"
+  },
+  "errors": {
+    "codes": {
+      "VALIDATION_ERROR": "The submitted data is invalid.",
+      "AUTHENTICATION_REQUIRED": "Please sign in first.",
+      "AUTHORIZATION_DENIED": "You do not have access to this resource.",
+      "RESOURCE_NOT_FOUND": "The requested resource was not found.",
+      "DUPLICATE_RESOURCE": "A duplicate record already exists.",
+      "CONFLICT_CONCURRENT_UPDATE": "Someone else updated this record — refresh and retry.",
+      "INSUFFICIENT_STOCK": "There is not enough stock for this operation.",
+      "BUSINESS_RULE_VIOLATION": "This operation violates a business rule.",
+      "RATE_LIMITED": "Too many requests — please slow down.",
+      "INTERNAL_ERROR": "Something went wrong on our side. Please try again.",
+      "STALE_VERSION": "This record changed since you opened it — refresh and retry.",
+      "RESOURCE_LOCKED": "The resource is locked by another operation."
+    },
+    "unreachable": "The service is currently unreachable.",
+    "unexpected": "An unexpected error occurred."
+  },
+  "footer": {
+    "columns": {
+      "company": "Company",
+      "operations": "Operations",
+      "support": "Support"
+    },
+    "links": {
+      "about": "About Zarand",
+      "contact": "Contact",
+      "careers": "Careers",
+      "warehouse": "Warehouse",
+      "loans": "Loans & Guarantees",
+      "assets": "Asset Tracking",
+      "help": "Help Center",
+      "privacy": "Privacy",
+      "terms": "Terms of Use"
+    },
+    "legal": "© {year} Zarand Coking & Steel. All rights reserved."
+  },
+  "locale": {
+    "switcher": "Language",
+    "en": "English",
+    "fa": "فارسی"
+  }
+}
