@@ -1,9 +1,12 @@
+import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.common.scope import ScopeLevel
+
+NATIONAL_ID_PATTERN = r"^\d{10}$"
 
 
 class UserOut(BaseModel):
@@ -94,3 +97,122 @@ class ScopeCreateIn(BaseModel):
 class PageParams(BaseModel):
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
+
+
+# --- Organization structure ---
+
+
+class ComplexOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    code: str
+    name: str
+    name_fa: str
+    company_id: uuid.UUID
+
+
+class WorkplaceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    code: str
+    name: str
+    name_fa: str
+    complex_id: uuid.UUID
+
+
+# --- Employees ---
+
+
+class EmployeeUserIn(BaseModel):
+    email: EmailStr
+    username: str = Field(min_length=3, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class EmployeeCreateIn(BaseModel):
+    national_id: str = Field(pattern=NATIONAL_ID_PATTERN)
+    personnel_code: str = Field(min_length=1, max_length=50)
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    first_name_fa: str | None = Field(default=None, max_length=100)
+    last_name_fa: str | None = Field(default=None, max_length=100)
+    birth_date: date | None = None
+    phone: str | None = Field(default=None, max_length=20)
+    workplace_id: uuid.UUID
+    user: EmployeeUserIn
+
+
+class EmployeeUpdateIn(BaseModel):
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    first_name_fa: str | None = Field(default=None, max_length=100)
+    last_name_fa: str | None = Field(default=None, max_length=100)
+    birth_date: date | None = None
+    phone: str | None = Field(default=None, max_length=20)
+    workplace_id: uuid.UUID | None = None
+    version: int = Field(ge=1)
+
+
+class EmployeeUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    username: str
+    is_active: bool
+
+
+class EmployeeWorkplaceOut(BaseModel):
+    id: uuid.UUID
+    code: str
+    name: str
+    name_fa: str
+    complex_id: uuid.UUID
+
+
+class EmployeeComplexOut(BaseModel):
+    id: uuid.UUID
+    code: str
+    name: str
+    name_fa: str
+
+
+class EmployeeOut(BaseModel):
+    id: uuid.UUID
+    version: int
+    national_id: str
+    personnel_code: str
+    first_name: str
+    last_name: str
+    first_name_fa: str | None = None
+    last_name_fa: str | None = None
+    birth_date: date | None = None
+    phone: str | None = None
+    is_active: bool
+    workplace: EmployeeWorkplaceOut
+    complex: EmployeeComplexOut
+    user: EmployeeUserOut
+    created_at: datetime
+
+
+class EmployeeSummaryOut(BaseModel):
+    id: uuid.UUID
+    national_id: str
+    personnel_code: str
+    first_name: str
+    last_name: str
+    is_active: bool
+    workplace_id: uuid.UUID
+    workplace_name: str
+
+
+class PasswordSetIn(BaseModel):
+    password: str = Field(min_length=8, max_length=128)
+
+
+class StatusFilterIn(enum.StrEnum):
+    ACTIVE = "active"
+    DEACTIVATED = "deactivated"
+    ALL = "all"

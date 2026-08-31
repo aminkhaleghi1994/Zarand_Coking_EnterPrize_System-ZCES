@@ -1,8 +1,13 @@
+from typing import TypedDict
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.modules.audit.contracts import write_audit
 from app.modules.user.models import (
+    Company,
+    Complex,
     Permission,
     Role,
     RolePermission,
@@ -10,7 +15,27 @@ from app.modules.user.models import (
     ScopeLevel,
     User,
     UserRole,
+    Workplace,
 )
+
+
+class _UnitSpec(TypedDict):
+    code: str
+    name: str
+    name_fa: str
+
+
+class _ComplexSpec(TypedDict):
+    code: str
+    name: str
+    name_fa: str
+    workplaces: list[_UnitSpec]
+
+
+class _OrgTree(TypedDict):
+    company: _UnitSpec
+    complexes: list[_ComplexSpec]
+
 
 BASE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("user:list:read", "List users", "مشاهده فهرست کاربران"),
@@ -19,6 +44,13 @@ BASE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("user:role:assign", "Assign roles", "تخصیص نقش"),
     ("user:permission:read", "Read permissions", "مشاهده مجوزها"),
     ("user:scope:assign", "Assign scopes", "تخصیص دامنه دسترسی"),
+    ("user:employee:read", "View employees", "مشاهده کارکنان"),
+    ("user:employee:read_full", "View full employee identifiers", "مشاهده کامل شناسه‌های کارکنان"),
+    ("user:employee:create", "Create employees", "ایجاد کارمند"),
+    ("user:employee:update", "Update employees", "ویرایش کارکنان"),
+    ("user:employee:deactivate", "Deactivate employees", "غیرفعال‌سازی کارکنان"),
+    ("user:password:set", "Set user passwords", "تنظیم گذرواژه کاربران"),
+    ("user:org:read", "View organization structure", "مشاهده ساختار سازمانی"),
     ("audit:log:read", "Read audit logs", "مشاهده لاگ‌های ممیزی"),
     ("audit:log:read_full", "Read full audit snapshots", "مشاهده کامل اسنپ‌شات‌های ممیزی"),
 ]
@@ -40,6 +72,30 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 }
 
 UNSAFE_PASSWORDS = {"change_me_now", "change_me", "admin", "password", "12345678"}
+
+ORG_TREE: _OrgTree = {
+    "company": {"code": "ZCS", "name": "Zarand Coking & Steel", "name_fa": "کک و فولاد زرند"},
+    "complexes": [
+        {
+            "code": "CTR",
+            "name": "Coking and Tar Refining Complex",
+            "name_fa": "مجتمع کک‌سازی و پالایش قطران",
+            "workplaces": [
+                {"code": "KCM", "name": "Khamroud Coal Mine", "name_fa": "معدن زغال خامرود"},
+                {"code": "CP1", "name": "Coke Plant 1", "name_fa": "کوک‌سازی ۱"},
+                {"code": "CP2", "name": "Coke Plant 2", "name_fa": "کوک‌سازی ۲"},
+            ],
+        },
+        {
+            "code": "SM",
+            "name": "Steelmaking Complex",
+            "name_fa": "مجتمع فولادسازی",
+            "workplaces": [
+                {"code": "SP", "name": "Steel Plant", "name_fa": "واحد فولادسازی"},
+            ],
+        },
+    ],
+}
 
 
 def _get_or_create_permission(
@@ -106,6 +162,51 @@ def _ensure_global_scope(session: Session, user: User, permission: Permission) -
             )
         )
         session.flush()
+
+
+def _seed_organization(session: Session) -> int:
+    """Idempotent org tree upsert keyed by natural codes. Returns created count."""
+    created = 0
+    company_spec = ORG_TREE["company"]
+    company = session.scalar(select(Company).where(Company.code == company_spec["code"]))
+    if company is None:
+        company = Company(
+            code=company_spec["code"],
+            name=company_spec["name"],
+            name_fa=company_spec["name_fa"],
+        )
+        session.add(company)
+        session.flush()
+        created += 1
+
+    for complex_spec in ORG_TREE["complexes"]:
+        complex_ = session.scalar(select(Complex).where(Complex.code == complex_spec["code"]))
+        if complex_ is None:
+            complex_ = Complex(
+                company_id=company.id,
+                code=complex_spec["code"],
+                name=complex_spec["name"],
+                name_fa=complex_spec["name_fa"],
+            )
+            session.add(complex_)
+            session.flush()
+            created += 1
+        for workplace_spec in complex_spec["workplaces"]:
+            workplace = session.scalar(
+                select(Workplace).where(Workplace.code == workplace_spec["code"])
+            )
+            if workplace is None:
+                session.add(
+                    Workplace(
+                        complex_id=complex_.id,
+                        code=workplace_spec["code"],
+                        name=workplace_spec["name"],
+                        name_fa=workplace_spec["name_fa"],
+                    )
+                )
+                session.flush()
+                created += 1
+    return created
 
 
 def _assert_safe_admin_password(password: str, username: str, email: str) -> None:
@@ -178,11 +279,23 @@ def run_seed(session: Session, *, prod: bool = False) -> dict[str, int]:
     for permission in permissions.values():
         _ensure_global_scope(session, admin, permission)
 
+    org_created = _seed_organization(session)
+    if org_created > 0:
+        write_audit(
+            session,
+            action="ORG_SEEDED",
+            entity_type="organization",
+            actor_user_id=None,
+            after={"records_created": org_created},
+            critical=True,
+        )
+
     session.commit()
     return {
         "permissions_created": created_permissions,
         "roles_created": created_roles,
         "admin_created": int(created_admin),
+        "org_created": org_created,
     }
 
 

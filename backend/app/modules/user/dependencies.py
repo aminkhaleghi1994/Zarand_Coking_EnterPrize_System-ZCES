@@ -36,3 +36,21 @@ def require_permission(operation: str) -> Callable[..., ScopeContext]:
         return context
 
     return dependency
+
+
+def require_operation(operation: str) -> Callable[..., ScopeContext]:
+    """Permission gate for scope-filtered (unit-aware) endpoints.
+
+    Only checks that the caller is active and holds the permission code —
+    the mandatory scope filter is applied per-row/per-target by the
+    repository/service via `allowed_units` / `can(..., target)`. A caller
+    with the permission but no unit coverage sees an empty result set and
+    every mutation against a concrete unit is denied (implicit deny).
+    """
+
+    def dependency(context: ScopeContext = Depends(load_context)) -> ScopeContext:
+        if not context.is_active or operation not in context.permission_codes:
+            raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+        return context
+
+    return dependency

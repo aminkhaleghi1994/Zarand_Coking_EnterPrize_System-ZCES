@@ -15,23 +15,38 @@ from app.core.errors import (
     validation_error,
 )
 from app.modules.audit.contracts import write_audit
-from app.modules.user import auth_service, repository
-from app.modules.user.dependencies import load_context, require_permission
+from app.modules.user import auth_service, employee_service, repository
+from app.modules.user.dependencies import load_context, require_operation, require_permission
+from app.modules.user.employee_repository import list_employees
 from app.modules.user.models import Role, ScopeAssignment, ScopeLevel, UserRole
+from app.modules.user.org_repository import (
+    list_complexes as org_list_complexes,
+)
+from app.modules.user.org_repository import (
+    list_workplaces as org_list_workplaces,
+)
 from app.modules.user.schemas import (
     AssignRoleIn,
+    ComplexOut,
+    EmployeeCreateIn,
+    EmployeeOut,
+    EmployeeSummaryOut,
+    EmployeeUpdateIn,
     LoginIn,
     MeOut,
     PageParams,
+    PasswordSetIn,
     PermissionOut,
     RefreshTokenIn,
     RoleCreateIn,
     RoleOut,
     ScopeAssignmentOut,
     ScopeCreateIn,
+    StatusFilterIn,
     SuccessOut,
     TokenPairOut,
     UserOut,
+    WorkplaceOut,
 )
 
 require_role_read = require_permission("user:role:read")
@@ -40,6 +55,12 @@ require_role_assign = require_permission("user:role:assign")
 require_permission_read = require_permission("user:permission:read")
 require_user_list = require_permission("user:list:read")
 require_scope_assign = require_permission("user:scope:assign")
+require_org_read = require_operation("user:org:read")
+require_employee_read = require_operation("user:employee:read")
+require_employee_create = require_operation("user:employee:create")
+require_employee_update = require_operation("user:employee:update")
+require_employee_deactivate = require_operation("user:employee:deactivate")
+require_password_set = require_operation("user:password:set")
 
 router = APIRouter(tags=["auth"])
 admin_router = APIRouter(tags=["admin"])
@@ -287,4 +308,130 @@ def revoke_scope(
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
     )
+    return SuccessOut()
+
+
+# --- Organization structure (US1) ---
+
+
+@admin_router.get("/org/complexes", response_model=Page[ComplexOut])
+def get_org_complexes(
+    params: PageParams = Depends(),
+    context: ScopeContext = Depends(require_org_read),
+    session: Session = Depends(get_db),
+) -> Page[ComplexOut]:
+    return org_list_complexes(session, context, params)
+
+
+@admin_router.get("/org/workplaces", response_model=Page[WorkplaceOut])
+def get_org_workplaces(
+    params: PageParams = Depends(),
+    complex_id: uuid.UUID | None = None,
+    context: ScopeContext = Depends(require_org_read),
+    session: Session = Depends(get_db),
+) -> Page[WorkplaceOut]:
+    return org_list_workplaces(session, context, params, complex_id=complex_id)
+
+
+# --- Employees (US2-US4) ---
+
+
+@admin_router.get("/employees", response_model=Page[EmployeeSummaryOut])
+def get_employees(
+    params: PageParams = Depends(),
+    search: str | None = None,
+    status: StatusFilterIn = StatusFilterIn.ACTIVE,
+    workplace_id: uuid.UUID | None = None,
+    complex_id: uuid.UUID | None = None,
+    context: ScopeContext = Depends(require_employee_read),
+    session: Session = Depends(get_db),
+) -> Page[EmployeeSummaryOut]:
+    page = list_employees(
+        session,
+        context,
+        params,
+        search=search,
+        status=status,
+        workplace_id=workplace_id,
+        complex_id=complex_id,
+    )
+    if "user:employee:read_full" not in context.permission_codes:
+        from app.common.masking import mask_identifier
+
+        page = page.model_copy(
+            update={
+                "items": [
+                    item.model_copy(update={"national_id": mask_identifier(item.national_id)})
+                    for item in page.items
+                ]
+            }
+        )
+    return page
+
+
+@admin_router.post("/employees", response_model=EmployeeOut, status_code=201)
+def post_employee(
+    payload: EmployeeCreateIn,
+    context: ScopeContext = Depends(require_employee_create),
+    session: Session = Depends(get_db),
+) -> EmployeeOut:
+    employee = employee_service.create_employee_with_user(session, context, payload)
+    return employee_service.to_employee_out(session, employee, context)
+
+
+@admin_router.get("/employees/{employee_id}", response_model=EmployeeOut)
+def get_employee_detail(
+    employee_id: uuid.UUID,
+    context: ScopeContext = Depends(require_employee_read),
+    session: Session = Depends(get_db),
+) -> EmployeeOut:
+    from app.modules.user import employee_repository
+
+    employee = employee_repository.get_employee_in_scope(
+        session, employee_id, context, "user:employee:read"
+    )
+    if employee is None:
+        raise not_found("Employee not found")
+    return employee_service.to_employee_out(session, employee, context)
+
+
+@admin_router.patch("/employees/{employee_id}", response_model=EmployeeOut)
+def patch_employee(
+    employee_id: uuid.UUID,
+    payload: EmployeeUpdateIn,
+    context: ScopeContext = Depends(require_employee_update),
+    session: Session = Depends(get_db),
+) -> EmployeeOut:
+    employee = employee_service.update_employee(session, context, employee_id, payload)
+    return employee_service.to_employee_out(session, employee, context)
+
+
+@admin_router.post("/employees/{employee_id}/deactivate", response_model=EmployeeOut)
+def post_employee_deactivate(
+    employee_id: uuid.UUID,
+    context: ScopeContext = Depends(require_employee_deactivate),
+    session: Session = Depends(get_db),
+) -> EmployeeOut:
+    employee = employee_service.deactivate_employee(session, context, employee_id)
+    return employee_service.to_employee_out(session, employee, context)
+
+
+@admin_router.post("/employees/{employee_id}/reactivate", response_model=EmployeeOut)
+def post_employee_reactivate(
+    employee_id: uuid.UUID,
+    context: ScopeContext = Depends(require_employee_deactivate),
+    session: Session = Depends(get_db),
+) -> EmployeeOut:
+    employee = employee_service.reactivate_employee(session, context, employee_id)
+    return employee_service.to_employee_out(session, employee, context)
+
+
+@admin_router.post("/users/{user_id}/password", response_model=SuccessOut)
+def post_user_password(
+    user_id: uuid.UUID,
+    payload: PasswordSetIn,
+    context: ScopeContext = Depends(require_password_set),
+    session: Session = Depends(get_db),
+) -> SuccessOut:
+    employee_service.set_user_password(session, context, user_id, payload.password)
     return SuccessOut()
