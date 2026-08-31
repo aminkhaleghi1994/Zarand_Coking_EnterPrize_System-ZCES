@@ -11,17 +11,27 @@ prevention and debounced live search, warehouse and shelf definition, stock
 placement at shelf level, audited stock movements as the only way stock ever
 changes (atomic, row-locked, never negative), and low-stock alerting.
 
+## Clarifications
+
+### Session 2026-08-31
+
+- Q: Should receiving stock, issuing stock, and correcting (adjusting) stock be three separately-gated permissions, or one shared permission for any stock change? → A: Three separate permissions — receive, issue, and adjust are each independently gated, so daily stock work and quantity corrections are separate authorities.
+- Q: Should catalog items carry an item code (SKU/part number) in addition to their name, or is the name the only identity? → A: Items carry an optional unique code alongside the name; uniqueness applies among active items and only when a code is provided; search matches name or code.
+- Q: Should stock always be recorded in the item's single unit of measure with no unit conversion, or can keepers enter quantities in different units? → A: One unit per item — every placement, movement, and threshold for an item is expressed in that item's unit; no conversion exists in this phase.
+- Q: Roughly how many distinct catalog items should the first version stay fast and usable for? → A: Up to about 500 items — a focused industrial catalog; search and pagination stay simple and comfortably fast at that scale.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Item catalog with duplicate prevention and live search (Priority: P1)
 
 As a warehouse keeper, I define each item once in the company catalog: a
-bilingual display name, a unit of measure, a minimum-stock threshold, and an
-optional description. When I start typing a name while defining or picking an
-item, matching catalog entries appear live as I type, so I can select the
-existing item instead of creating a duplicate. The system refuses to create a
-second active item with the same name; when an item is retired (soft-deleted),
-its name becomes reusable. Every create and edit is recorded in the audit
+bilingual display name, an optional item code (SKU/part number), a unit of
+measure, a minimum-stock threshold, and an optional description. When I start
+typing a name or code while defining or picking an item, matching catalog
+entries appear live as I type, so I can select the existing item instead of
+creating a duplicate. The system refuses to create a second active item with
+the same name or the same code; when an item is retired (soft-deleted), its
+name and code become reusable. Every create and edit is recorded in the audit
 trail.
 
 **Why this priority**: The catalog is the vocabulary of the whole warehouse
@@ -42,9 +52,9 @@ it and successfully reuse the name — all without involving shelves or stock.
    create another active item named "X", **Then** the creation is rejected
    with a duplicate-resource error naming the conflicting field, and the live
    search surfaces the existing item to select instead.
-3. **Given** the user types at least a few characters of an item name,
-   **When** the live search responds, **Then** matching active items are
-   returned as a bounded, paginated result set that updates as the user
+3. **Given** the user types at least a few characters of an item name or
+   code, **When** the live search responds, **Then** matching active items
+   are returned as a bounded, paginated result set that updates as the user
    continues typing, without flooding the system with a request per
    keystroke.
 4. **Given** an active item named "X", **When** it is retired (soft-deleted),
@@ -136,6 +146,9 @@ issues to prove exactly one wins.
 6. **Given** a placement, **When** its history is opened, **Then** all
    movements are listed newest-first with type, quantity, reason, actor, and
    timestamp, paginated.
+7. **Given** a keeper holding the receive and issue permissions but not the
+   adjustment permission, **When** they attempt a stock correction,
+   **Then** the operation is denied with the standard authorization error.
 
 ---
 
@@ -209,9 +222,10 @@ reduced-motion behavior.
 
 ### Edge Cases
 
-- What happens when an item name is submitted that differs only by surrounding
-  whitespace or letter case from an active item? The system normalizes and
-  treats it as a duplicate, rejecting with the standard duplicate error.
+- What happens when an item name or code is submitted that differs only by
+  surrounding whitespace or letter case from an active item? The system
+  normalizes and treats it as a duplicate, rejecting with the standard
+  duplicate error.
 - What happens when a receive/issue/adjust quantity is zero or negative? The
   operation is rejected with field-level validation before any stock logic
   runs.
@@ -231,6 +245,9 @@ reduced-motion behavior.
   this phase).
 - What happens when a search term matches hundreds of items? Results stay
   paginated with a bounded page size; search never returns an unbounded list.
+- What happens when a shelf or item with an active low-stock alert is
+  retired? The alert is resolved (the condition can no longer be acted on)
+  and the resolution is audited; history remains queryable.
 - What happens when a user without any warehouse scope queries warehouse
   endpoints? They receive the standard authorization denial that never
   reveals whether matching records exist.
@@ -242,16 +259,17 @@ reduced-motion behavior.
 **Item catalog**
 
 - **FR-001**: The system MUST allow authorized users to create catalog items
-  carrying a bilingual display name, a unit of measure, a minimum-stock
-  threshold, and an optional description.
+  carrying a bilingual display name, an optional item code (SKU/part number),
+  a unit of measure, a minimum-stock threshold, and an optional description.
 - **FR-002**: The system MUST enforce that an item's name is unique among
   *active* items (case- and whitespace-normalized), rejecting duplicates with
-  a standard duplicate-resource error, and MUST allow the name again once the
-  previous holder is retired.
+  a standard duplicate-resource error; where an item code is provided it MUST
+  likewise be unique among active items; names (and codes) MUST become
+  reusable once the previous holder is retired.
 - **FR-003**: The system MUST provide a live search over active items by name
-  that is executed server-side against an indexed, paginated query with a
-  bounded page size, and the UI MUST debounce user typing so that pauses —
-  not keystrokes — trigger searches.
+  or item code that is executed server-side against an indexed, paginated
+  query with a bounded page size, and the UI MUST debounce user typing so
+  that pauses — not keystrokes — trigger searches.
 - **FR-004**: The system MUST support editing catalog items (name, unit,
   threshold, description) with stale-write detection: a save based on an
   outdated view MUST be rejected with a conflict error.
@@ -277,13 +295,18 @@ reduced-motion behavior.
 
 - **FR-010**: The system MUST record stock as a quantity of one item on one
   shelf (placement), created implicitly on first receive; stock MUST never be
-  recorded anywhere else.
+  recorded anywhere else; all quantities for an item (placements, movements,
+  threshold) are expressed in that item's single unit of measure, with no
+  unit conversion.
 - **FR-011**: The system MUST guarantee that every quantity change is stored
   together with exactly one stock-movement record in the same all-or-nothing
   operation; a quantity change without its movement MUST be impossible.
 - **FR-012**: Each movement MUST record: movement type (receive, issue,
   adjustment; extensible for future flows), quantity, the resulting quantity,
   the acting user, a timestamp, and an optional reason/reference text.
+- **FR-022**: Receiving stock, issuing stock, and adjusting stock MUST be
+  gated by three separate permissions; a holder of the receive and issue
+  permissions who lacks the adjustment permission MUST be denied adjustments.
 - **FR-013**: The system MUST serialize concurrent decreases of the same
   placement (row-level locking) and MUST refuse any operation whose
   application would make a placement quantity negative, with a dedicated
@@ -302,8 +325,9 @@ reduced-motion behavior.
   configurable comparison arrives with the settings phase).
 - **FR-017**: The system MUST create at most one active low-stock alert per
   placement per below-threshold episode, clearing (resolving) the alert when
-  the quantity recovers to the threshold or above, and raising a new alert on
-  a subsequent drop.
+  the quantity recovers to the threshold or above — or when the placement's
+  shelf or item is retired — and raising a new alert on a subsequent drop
+  while the placement remains active.
 - **FR-018**: Each alert MUST be recorded in the audit trail, and active
   alerts MUST be listed scope-filtered with item, warehouse, shelf, current
   quantity, and threshold. Delivery of alerts as user notifications arrives
@@ -330,9 +354,10 @@ reduced-motion behavior.
 ### Key Entities *(include if feature involves data)*
 
 - **ItemCatalog**: the definition of an item — bilingual name (unique among
-  active items), unit of measure, minimum-stock threshold, optional
-  description; soft-deletable; versioned for concurrent edits. Distinct from
-  any physical location: an item exists whether or not stock exists.
+  active items), optional item code (unique among active items when
+  provided), unit of measure, minimum-stock threshold, optional description;
+  soft-deletable; versioned for concurrent edits. Distinct from any physical
+  location: an item exists whether or not stock exists.
 - **Warehouse**: a physical warehouse bound to exactly one workplace (the
   scope anchor); bilingual name and code (unique among active); soft-deletable.
 - **Shelf**: a physical shelf inside exactly one warehouse; identifier/name
@@ -353,9 +378,9 @@ reduced-motion behavior.
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% of duplicate active item-name creation attempts are
-  rejected; 100% of such names become creatable after the previous holder is
-  retired.
+- **SC-001**: 100% of duplicate active item-name (and item-code) creation
+  attempts are rejected; 100% of such names/codes become creatable after the
+  previous holder is retired.
 - **SC-002**: Live item search returns matching results fast enough that a
   user typing perceives results as immediate (no perceptible stall between
   keystroke pauses and results), with every result set bounded and paginated.
@@ -382,6 +407,9 @@ reduced-motion behavior.
 - Each warehouse is bound to one workplace (the finest scoping unit) so
   warehouse visibility follows the existing organizational scope; a warehouse
   shared across workplaces is not needed in v1.
+- Catalog scale: the first version targets up to roughly 500 active items;
+  search and list pagination are designed to stay simple and fast at that
+  scale (no heavy search machinery is justified for v1).
 - The minimum-stock threshold lives on the catalog item and is evaluated per
   placement; an aggregate per-item view across shelves can arrive with the
   reports phase.
@@ -392,9 +420,10 @@ reduced-motion behavior.
   and audits them.
 - Movement types in v1 are receive, issue, and adjustment; the item-request
   fulfillment movement (Phase 5) will reuse the same ledger.
-- Expiry dates, serial/lot tracking, and multi-location transfers between
-  warehouses are not required by the source requirements and are out of scope;
-  a transfer can be composed later from an issue plus a receive.
+- Expiry dates, serial/lot tracking, multi-location transfers between
+  warehouses, and unit-of-measure conversion are not required by the source
+  requirements and are out of scope; a transfer can be composed later from an
+  issue plus a receive.
 - The existing Phase-2/3 authentication, RBAC, scope resolver, audit base,
   and seeded permission model are reused as-is; new warehouse permissions are
   added to the seed. Cross-module needs (workplace lookup for scope anchors)
