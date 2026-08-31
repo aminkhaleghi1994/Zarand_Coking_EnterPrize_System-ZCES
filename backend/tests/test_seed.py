@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
 from app.core.database import Base
-from app.modules.user.models import Permission, Role, User
+from app.modules.user.models import Permission, Role, RolePermission, User
 from app.seeds.seed_dev import UNSAFE_PASSWORDS, run_seed
 
 _TEST_DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -17,6 +17,51 @@ requires_database = pytest.mark.skipif(
 )
 
 TOTAL_PERMISSIONS = 8
+
+WAREHOUSE_PERMISSION_CODES = {
+    "warehouse:item:create",
+    "warehouse:item:read",
+    "warehouse:item:update",
+    "warehouse:item:retire",
+    "warehouse:warehouse:create",
+    "warehouse:warehouse:read",
+    "warehouse:warehouse:update",
+    "warehouse:warehouse:retire",
+    "warehouse:shelf:create",
+    "warehouse:shelf:read",
+    "warehouse:shelf:update",
+    "warehouse:shelf:retire",
+    "warehouse:stock:receive",
+    "warehouse:stock:issue",
+    "warehouse:stock:adjust",
+    "warehouse:stock:read",
+    "warehouse:alert:read",
+}
+
+WAREHOUSE_ROLE_EXPECTATIONS = {
+    "WarehouseKeeper": {
+        "warehouse:item:create",
+        "warehouse:item:read",
+        "warehouse:item:update",
+        "warehouse:item:retire",
+        "warehouse:warehouse:read",
+        "warehouse:shelf:create",
+        "warehouse:shelf:read",
+        "warehouse:shelf:update",
+        "warehouse:shelf:retire",
+        "warehouse:stock:receive",
+        "warehouse:stock:issue",
+        "warehouse:stock:read",
+        "warehouse:alert:read",
+    },
+    "WarehouseApprover": {
+        "warehouse:item:read",
+        "warehouse:warehouse:read",
+        "warehouse:shelf:read",
+        "warehouse:stock:read",
+        "warehouse:alert:read",
+    },
+}
 
 
 @pytest.fixture()
@@ -72,6 +117,36 @@ def test_seed_is_idempotent(pg_session):  # type: ignore[no-untyped-def]
     assert _count(User, pg_session) == users_before
     assert _count(Role, pg_session) == roles_before
     assert _count(Permission, pg_session) == permissions_before
+
+
+@requires_database
+def test_seed_creates_warehouse_permissions(pg_session):  # type: ignore[no-untyped-def]
+    run_seed(pg_session, prod=False)
+    codes = set(pg_session.scalars(select(Permission.code)).all())
+    assert WAREHOUSE_PERMISSION_CODES <= codes
+
+
+@requires_database
+def test_seed_maps_warehouse_roles(pg_session):  # type: ignore[no-untyped-def]
+    run_seed(pg_session, prod=False)
+    for role_name, expected_codes in WAREHOUSE_ROLE_EXPECTATIONS.items():
+        role = pg_session.scalar(select(Role).where(Role.name == role_name))
+        assert role is not None, role_name
+        granted = set(
+            pg_session.scalars(
+                select(Permission.code)
+                .join(RolePermission, RolePermission.permission_id == Permission.id)
+                .where(RolePermission.role_id == role.id)
+            ).all()
+        )
+        assert expected_codes <= granted, role_name
+    keeper_has_adjust = pg_session.scalar(
+        select(Permission.code)
+        .join(RolePermission, RolePermission.permission_id == Permission.id)
+        .join(Role, Role.id == RolePermission.role_id)
+        .where(Role.name == "WarehouseKeeper", Permission.code == "warehouse:stock:adjust")
+    )
+    assert keeper_has_adjust is None, "adjust must stay outside the keeper role (clarify Q1)"
 
 
 @requires_database
