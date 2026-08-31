@@ -3,6 +3,31 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.4.0] - 2026-08-31
+
+### Added
+- Warehouse, item catalog & inventory (Phase 4): item catalog with bilingual
+  names, optional unique SKU codes, units and minimum thresholds — duplicate
+  names/codes impossible via normalized partial unique indexes (case- and
+  whitespace-proof, reusable after retirement); debounced live search
+  (indexed, paginated) powering the item picker; warehouses anchored to
+  workplaces with shelves (retirement blocked while stock remains); stock
+  recorded only as shelf×item placements whose quantity changes exclusively
+  through an append-only stock-movement ledger written atomically in the same
+  transaction, decrements serialized with SELECT … FOR UPDATE and a
+  quantity >= 0 CHECK — negative inventory structurally impossible (8-thread
+  overdraw race test: exactly the feasible issues succeed, ledger sum equals
+  the final quantity); low-stock alerts raised/resolved per placement episode
+  and audited; three separate receive/issue/adjust permissions; scope-filtered
+  queries on every physical-domain read; bilingual RTL responsive warehouse
+  console (catalog / warehouses / stock / low-stock tabs, tables collapse to
+  cards <768px, Jalali timestamps in Persian)
+- Migration `0004_warehouse_catalog_inventory` (6 tables, partial uniques,
+  CHECK constraints — reversible, verified upgrade → downgrade → upgrade)
+- 17 seeded warehouse permissions + WarehouseKeeper/WarehouseApprover role
+  mappings; smoke-test warehouse section (catalog duplicates, stock flow,
+  overdraw rejection, alert raised)
+
 ## [0.3.0] - 2026-08-31
 
 ### Added

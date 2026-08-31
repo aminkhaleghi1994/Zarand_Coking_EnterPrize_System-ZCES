@@ -110,9 +110,9 @@ surfaces — not new features.
 
 ## Phase 8: Polish & Convergence
 
-- [ ] T032 [P] [POL] `scripts/smoke-test.ps1`: warehouse section via BFF cookie flow — item create 201 → duplicate name 409 → warehouse+shelf create → receive 50 → issue 15 → overdraw 999 rejected (`INSUFFICIENT_STOCK`) → alert listed after dropping below threshold (SC-001, SC-003, SC-004, SC-005)
-- [ ] T033 [POL] CHANGELOG 0.4.0 entry (warehouse module) + VERSION bump + README warehouse section (module map, permissions, roles)
-- [ ] T034 [POL] Full gate: backend `ruff check`/`ruff format --check`/`mypy app`/`pytest` (incl. PG integration + concurrency), frontend `npm run lint`/`tsc --noEmit`/`build`, seed run twice idempotent, manual browser checklist per quickstart.md (10 steps), `scripts/smoke-ui.ps1` green, commit + push; CI green
+- [x] T032 [P] [POL] `scripts/smoke-test.ps1`: warehouse section via BFF cookie flow — item create 201 → duplicate name 409 → warehouse+shelf create → receive 50 → issue 15 → overdraw 999 rejected (`INSUFFICIENT_STOCK`) → alert listed after dropping below threshold (SC-001, SC-003, SC-004, SC-005)
+- [x] T033 [POL] CHANGELOG 0.4.0 entry (warehouse module) + VERSION bump + README warehouse section (module map, permissions, roles)
+- [x] T034 [POL] Full gate: backend `ruff check`/`ruff format --check`/`mypy app`/`pytest` (incl. PG integration + concurrency), frontend `npm run lint`/`tsc --noEmit`/`build`, seed run twice idempotent, manual browser checklist per quickstart.md (10 steps), `scripts/smoke-ui.ps1` green, commit + push; CI green
 
 ---
 
