@@ -15,12 +15,12 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 [FND] Permission seed: append `warehouse:request:read`, `warehouse:request:decide`, `warehouse:request:fulfill` to `BASE_PERMISSIONS` in `backend/app/seeds/seed_dev.py`; map `WarehouseApprover` += read+decide, `WarehouseKeeper` += read+fulfill; `tests/test_seed.py` additions: request permission presence, role mappings, idempotency (FR-015, research R8)
-- [ ] T002 [P] [FND] `backend/app/modules/warehouse/schemas.py`: `RequestLineIn` (item_id, quantity > 0 ≤3 decimals, note ≤500), `RequestCreateIn` (purpose non-blank, lines min 1), `RequestLineOut`, `RequestOut`, `DecisionIn` (version, optional note), `FulfillLineIn`/`FulfillIn`; `backend/tests/test_item_request_schemas.py` fixtures (FR-001, FR-003)
+- [x] T001 [FND] Permission seed: append `warehouse:request:read`, `warehouse:request:decide`, `warehouse:request:fulfill` to `BASE_PERMISSIONS` in `backend/app/seeds/seed_dev.py`; map `WarehouseApprover` += read+decide, `WarehouseKeeper` += read+fulfill; `tests/test_seed.py` additions: request permission presence, role mappings, idempotency (FR-015, research R8)
+- [x] T002 [P] [FND] `backend/app/modules/warehouse/schemas.py`: `RequestLineIn` (item_id, quantity > 0 ≤3 decimals, note ≤500), `RequestCreateIn` (purpose non-blank, lines min 1), `RequestLineOut`, `RequestOut`, `DecisionIn` (version, optional note), `FulfillLineIn`/`FulfillIn`; `backend/tests/test_item_request_schemas.py` fixtures (FR-001, FR-003)
 
 ## Phase 2: Foundational — models & migration (blocking)
 
-- [ ] T003 [FND] `backend/app/modules/warehouse/models.py`: `RequestStatus` enum + `ItemRequest` (requested_by FK, purpose_description, status default pending, decision fields, fulfilled_at, org anchor columns, version; no soft delete) + `ItemRequestLine` (request_id FK, item_id FK, quantity CHECK > 0, unique `(request_id, item_id)`, note) per data-model.md; alembic `backend/alembic/versions/0005_item_requests_flow.py`; verify reversible on local PG (data-model migration notes)
+- [x] T003 [FND] `backend/app/modules/warehouse/models.py`: `RequestStatus` enum + `ItemRequest` (requested_by FK, purpose_description, status default pending, decision fields, fulfilled_at, org anchor columns, version; no soft delete) + `ItemRequestLine` (request_id FK, item_id FK, quantity CHECK > 0, unique `(request_id, item_id)`, note) per data-model.md; alembic `backend/alembic/versions/0005_item_requests_flow.py`; verify reversible on local PG (data-model migration notes)
 
 **Checkpoint**: migration reversible; permissions seeded idempotently.
 
@@ -32,9 +32,9 @@ field errors.
 **Independent Test**: submit a 2-line request → pending + audited; empty
 lines / blank purpose / zero quantity / retired item each refused.
 
-- [ ] T004 [US1] `backend/app/modules/warehouse/request_repository.py`: `create_request` (with lines), `get_request_with_lines`, `list_requests(session, context, params, *, status)` — ownership OR scope filter (`requested_by` = caller OR org anchor in `allowed_units` of `warehouse:request:read`), newest first; `backend/tests/test_item_request_flow.py` (integration, PG): repository shapes, ownership visibility, scope visibility, status filter (FR-002, FR-014, research R10)
-- [ ] T005 [US1] `backend/app/modules/warehouse/request_service.py`: `create_request` — validation matrix (purpose, ≥1 line, quantities, active items, no duplicate item across lines), anchor org columns via requester employee workplace (user contract; nullable for anchorless users), persist pending + audit `REQUEST_CREATED` with lines snapshot; test additions (FR-001..FR-003, SC-001, research R6)
-- [ ] T006 [US1] `backend/app/modules/warehouse/router.py`: `POST /warehouse/requests` (self-service, active user), `GET /warehouse/requests` (status filter), `GET /warehouse/requests/{id}` (ownership or `warehouse:request:read` + scope, no existence leak); endpoint tests incl. roleless user CAN create (FR-013, FR-014, research R5)
+- [x] T004 [US1] `backend/app/modules/warehouse/request_repository.py`: `create_request` (with lines), `get_request_with_lines`, `list_requests(session, context, params, *, status)` — ownership OR scope filter (`requested_by` = caller OR org anchor in `allowed_units` of `warehouse:request:read`), newest first; `backend/tests/test_item_request_flow.py` (integration, PG): repository shapes, ownership visibility, scope visibility, status filter (FR-002, FR-014, research R10)
+- [x] T005 [US1] `backend/app/modules/warehouse/request_service.py`: `create_request` — validation matrix (purpose, ≥1 line, quantities, active items, no duplicate item across lines), anchor org columns via requester employee workplace (user contract; nullable for anchorless users), persist pending + audit `REQUEST_CREATED` with lines snapshot; test additions (FR-001..FR-003, SC-001, research R6)
+- [x] T006 [US1] `backend/app/modules/warehouse/router.py`: `POST /warehouse/requests` (self-service, active user), `GET /warehouse/requests` (status filter), `GET /warehouse/requests/{id}` (ownership or `warehouse:request:read` + scope, no existence leak); endpoint tests incl. roleless user CAN create (FR-013, FR-014, research R5)
 - [ ] T007 [P] [US1] BFF: `frontend/src/app/api/warehouse/requests/route.ts` (GET, POST+CSRF), `requests/[id]/route.ts` (GET); `lib/client-api.ts` `requestApi` + types; `messages/{en,fa}.json` `requests.*` namespace; nav entry (FR-017, constitution V)
 - [ ] T008 [US1] UI: `frontend/src/app/[locale]/(app)/requests/page.tsx` + `features/requests/RequestsView.tsx` (status filter chips, list, status chips, page controls) + `features/requests/RequestForm.tsx` (purpose text area, line editor with `ItemSearchCombobox` + quantity + note + add/remove, `RequestInputSchema` Zod mirror, inline errors); skeletons + responsive cards (FR-001, FR-003, FR-017, SC-001, SC-006, research R11)
 
@@ -49,7 +49,7 @@ and full audit.
 **Independent Test**: approve → status approved + audited; decide non-pending
 refused; two concurrent decisions → exactly one wins.
 
-- [ ] T009 [US2] `request_service.decide`: approve/reject from pending only (else `BUSINESS_RULE_VIOLATION`), version guard (`STALE_VERSION`), decision fields set, audit `REQUEST_APPROVED`/`REQUEST_REJECTED`; `tests/test_item_request_flow.py` additions: transitions, guards, concurrent-decision race via two sessions, out-of-scope denial (FR-004..FR-007, SC-002, research R3)
+- [x] T009 [US2] `request_service.decide`: approve/reject from pending only (else `BUSINESS_RULE_VIOLATION`), version guard (`STALE_VERSION`), decision fields set, audit `REQUEST_APPROVED`/`REQUEST_REJECTED`; `tests/test_item_request_flow.py` additions: transitions, guards, concurrent-decision race via two sessions, out-of-scope denial (FR-004..FR-007, SC-002, research R3)
 - [ ] T010 [US2] `router.py`: `POST /warehouse/requests/{id}/approve|reject` (`warehouse:request:decide` + scope target check) + endpoint tests + BFF `requests/[id]/approve|reject/route.ts` + UI decision buttons (permission-gated via `/api/auth/me` payload, note input) (FR-004..FR-007, FR-015)
 
 **Checkpoint**: decisions work in the browser with audit entries; races
@@ -65,8 +65,8 @@ drop exactly, fulfillment movements exist; overdraw refused naming the line;
 double fulfill refused; two requests racing one placement → exactly one
 fulfills.
 
-- [ ] T011 [US3] `request_service.fulfill`: load approved request + version guard, validate per-line placement payload (placement exists, matches line item, shelf active, in caller scope), decrement each line via `contracts.apply_fulfillment_issue` in ONE transaction, set status fulfilled + `fulfilled_at`, audit `REQUEST_FULFILLED` with per-line before/after; `tests/test_item_request_fulfillment.py`: happy path, overdraw atomicity (nothing deducted), double fulfillment refusal, pending refusal (FR-008..FR-012, SC-003, research R4)
-- [ ] T012 [US3] `backend/tests/test_item_request_concurrency.py` (PG): two approved requests racing one placement — exactly one fulfills, the other receives `INSUFFICIENT_STOCK`, stock equals expected, ledger consistent (SC-003, research R12)
+- [x] T011 [US3] `request_service.fulfill`: load approved request + version guard, validate per-line placement payload (placement exists, matches line item, shelf active, in caller scope), decrement each line via `contracts.apply_fulfillment_issue` in ONE transaction, set status fulfilled + `fulfilled_at`, audit `REQUEST_FULFILLED` with per-line before/after; `tests/test_item_request_fulfillment.py`: happy path, overdraw atomicity (nothing deducted), double fulfillment refusal, pending refusal (FR-008..FR-012, SC-003, research R4)
+- [x] T012 [US3] `backend/tests/test_item_request_concurrency.py` (PG): two approved requests racing one placement — exactly one fulfills, the other receives `INSUFFICIENT_STOCK`, stock equals expected, ledger consistent (SC-003, research R12)
 - [ ] T013 [US3] `router.py`: `POST /warehouse/requests/{id}/fulfill` (`warehouse:request:fulfill` + scope) + endpoint tests + BFF `requests/[id]/fulfill/route.ts` + UI `FulfillDialog` (per-line placement picker fed by `warehouseApi.placements` filtered per item) (FR-008..FR-012, FR-015)
 
 **Checkpoint**: full request → approve → fulfill loop moves stock in the
@@ -81,7 +81,7 @@ requests; denials never leak existence.
 each sees own; a CP1-scoped keeper sees only CP1-anchored requests; direct
 detail fetch of the other's request is denied without leak.
 
-- [ ] T014 [US4] Visibility test additions to `tests/test_item_request_flow.py`: ownership visibility across statuses, workplace-scoped keeper list purity (paginated full scan), cross-scope detail denial, global actor sees all (FR-014, FR-015, SC-005, research R6/R10)
+- [x] T014 [US4] Visibility test additions to `tests/test_item_request_flow.py`: ownership visibility across statuses, workplace-scoped keeper list purity (paginated full scan), cross-scope detail denial, global actor sees all (FR-014, FR-015, SC-005, research R6/R10)
 
 ## Phase 7: US5 — Bilingual UI completion pass (P2)
 

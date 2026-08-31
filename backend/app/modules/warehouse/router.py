@@ -4,14 +4,17 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.common.pagination import Page
-from app.common.scope import ScopeContext
+from app.common.scope import ScopeContext, allowed_units
 from app.core.database import get_db
-from app.modules.user.dependencies import require_operation
+from app.core.errors import AUTHORIZATION_DENIED, AppError, not_found
+from app.modules.user.dependencies import load_context, require_operation
 from app.modules.user.schemas import PageParams
-from app.modules.warehouse import repository, service
+from app.modules.warehouse import repository, request_repository, request_service, service
 from app.modules.warehouse.schemas import (
     AdjustIn,
     AlertOut,
+    DecisionIn,
+    FulfillIn,
     IssueIn,
     ItemCreateIn,
     ItemOut,
@@ -20,6 +23,8 @@ from app.modules.warehouse.schemas import (
     MovementOut,
     PlacementOut,
     ReceiveIn,
+    RequestCreateIn,
+    RequestOut,
     ShelfCreateIn,
     ShelfOut,
     ShelfRetireIn,
@@ -47,6 +52,8 @@ require_stock_receive = require_operation("warehouse:stock:receive")
 require_stock_issue = require_operation("warehouse:stock:issue")
 require_stock_adjust = require_operation("warehouse:stock:adjust")
 require_alert_read = require_operation("warehouse:alert:read")
+require_request_decide = require_operation("warehouse:request:decide")
+require_request_fulfill = require_operation("warehouse:request:fulfill")
 
 router = APIRouter(tags=["warehouse"])
 
@@ -274,3 +281,89 @@ def get_alerts(
 ) -> Page[AlertOut]:
     status = {"true": "active", "false": "resolved", "all": "all"}[active]
     return repository.list_alerts(session, context, params, status=status)
+
+
+# --- Item requests (Phase 5) ---
+
+
+@router.post("/warehouse/requests", response_model=RequestOut, status_code=201)
+def post_request(
+    payload: RequestCreateIn,
+    context: ScopeContext = Depends(load_context),
+    session: Session = Depends(get_db),
+) -> RequestOut:
+    request = request_service.create_request(session, context, payload)
+    lines = request_repository.get_request_lines(session, request.id)
+    email = request_repository.get_requester_email(session, request.requested_by)
+    return request_repository.to_request_out(session, request, lines, email)
+
+
+@router.get("/warehouse/requests", response_model=Page[RequestOut])
+def get_requests(
+    params: PageParams = Depends(),
+    status: str = Query(default="all", pattern="^(all|pending|approved|rejected|fulfilled)$"),
+    context: ScopeContext = Depends(load_context),
+    session: Session = Depends(get_db),
+) -> Page[RequestOut]:
+    return request_repository.list_requests(session, context, params, status=status)
+
+
+@router.get("/warehouse/requests/{request_id}", response_model=RequestOut)
+def get_request_detail(
+    request_id: uuid.UUID,
+    context: ScopeContext = Depends(load_context),
+    session: Session = Depends(get_db),
+) -> RequestOut:
+    request = request_repository.get_request(session, request_id)
+    if request is None:
+        raise not_found("Request not found")
+    if request.requested_by != uuid.UUID(context.user_id):
+        units = allowed_units(context, "warehouse:request:read")
+        covered = units.global_access or (
+            (request.workplace_id is not None and str(request.workplace_id) in units.workplace_ids)
+            or (request.complex_id is not None and str(request.complex_id) in units.complex_ids)
+        )
+        if not covered:
+            raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+    lines = request_repository.get_request_lines(session, request.id)
+    email = request_repository.get_requester_email(session, request.requested_by)
+    return request_repository.to_request_out(session, request, lines, email)
+
+
+@router.post("/warehouse/requests/{request_id}/approve", response_model=RequestOut)
+def post_request_approve(
+    request_id: uuid.UUID,
+    payload: DecisionIn,
+    context: ScopeContext = Depends(require_request_decide),
+    session: Session = Depends(get_db),
+) -> RequestOut:
+    request = request_service.decide_request(session, context, request_id, payload, approve=True)
+    lines = request_repository.get_request_lines(session, request.id)
+    email = request_repository.get_requester_email(session, request.requested_by)
+    return request_repository.to_request_out(session, request, lines, email)
+
+
+@router.post("/warehouse/requests/{request_id}/reject", response_model=RequestOut)
+def post_request_reject(
+    request_id: uuid.UUID,
+    payload: DecisionIn,
+    context: ScopeContext = Depends(require_request_decide),
+    session: Session = Depends(get_db),
+) -> RequestOut:
+    request = request_service.decide_request(session, context, request_id, payload, approve=False)
+    lines = request_repository.get_request_lines(session, request.id)
+    email = request_repository.get_requester_email(session, request.requested_by)
+    return request_repository.to_request_out(session, request, lines, email)
+
+
+@router.post("/warehouse/requests/{request_id}/fulfill", response_model=RequestOut)
+def post_request_fulfill(
+    request_id: uuid.UUID,
+    payload: FulfillIn,
+    context: ScopeContext = Depends(require_request_fulfill),
+    session: Session = Depends(get_db),
+) -> RequestOut:
+    request = request_service.fulfill_request(session, context, request_id, payload)
+    lines = request_repository.get_request_lines(session, request.id)
+    email = request_repository.get_requester_email(session, request.requested_by)
+    return request_repository.to_request_out(session, request, lines, email)

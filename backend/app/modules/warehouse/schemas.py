@@ -294,3 +294,78 @@ class AlertOut(BaseModel):
     current_quantity: str
     raised_at: datetime
     resolved_at: datetime | None = None
+
+
+# --- Item requests (Phase 5) ---
+
+
+class RequestLineIn(BaseModel):
+    item_id: uuid.UUID
+    quantity: Decimal = Field(gt=0)
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def _strip_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class RequestCreateIn(BaseModel):
+    purpose_description: str = Field(min_length=1, max_length=2000)
+    lines: list[RequestLineIn] = Field(min_length=1)
+
+    @field_validator("purpose_description")
+    @classmethod
+    def _strip_purpose(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+        return stripped
+
+
+class RequestLineOut(BaseModel):
+    id: uuid.UUID
+    item: ItemBriefOut
+    quantity: str
+    note: str | None = None
+
+
+class RequestOut(BaseModel):
+    id: uuid.UUID
+    version: int
+    status: str
+    requested_by: uuid.UUID
+    requested_by_email: str | None = None
+    purpose_description: str
+    decision_note: str | None = None
+    decided_by: uuid.UUID | None = None
+    decided_at: datetime | None = None
+    fulfilled_at: datetime | None = None
+    lines: list[RequestLineOut] = []
+    created_at: datetime
+
+
+class DecisionIn(BaseModel):
+    version: int = Field(ge=1)
+    note: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("note")
+    @classmethod
+    def _strip_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class FulfillLineIn(BaseModel):
+    line_id: uuid.UUID
+    placement_id: uuid.UUID
+
+
+class FulfillIn(BaseModel):
+    version: int = Field(ge=1)
+    lines: list[FulfillLineIn] = Field(min_length=1)
