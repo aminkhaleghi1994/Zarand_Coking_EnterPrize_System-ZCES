@@ -23,7 +23,8 @@
     },
     "comingSoon": "به‌زودی",
     "openMenu": "باز کردن ناوبری",
-    "closeMenu": "بستن ناوبری"
+    "closeMenu": "بستن ناوبری",
+    "phaseBadge": "فاز {phase}"
   },
   "dashboard": {
     "eyebrow": "کنسول عملیات",
@@ -78,6 +79,7 @@
     "statusChecking": "در حال بررسی…",
     "database": "پایگاه داده",
     "backend": "بک‌اند",
+    "version": "نسخه",
     "latency": "{ms} میلی‌ثانیه"
   },
   "login": {

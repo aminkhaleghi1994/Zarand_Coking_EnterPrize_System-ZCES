@@ -23,7 +23,8 @@
     },
     "comingSoon": "Coming soon",
     "openMenu": "Open navigation",
-    "closeMenu": "Close navigation"
+    "closeMenu": "Close navigation",
+    "phaseBadge": "Phase {phase}"
   },
   "dashboard": {
     "eyebrow": "Operations Console",
@@ -78,6 +79,7 @@
     "statusChecking": "Checking…",
     "database": "Database",
     "backend": "Backend",
+    "version": "Version",
     "latency": "{ms} ms"
   },
   "login": {
