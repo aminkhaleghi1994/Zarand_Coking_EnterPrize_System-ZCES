@@ -78,9 +78,7 @@ def authenticate(
     return user, access_token, refresh_token
 
 
-def issue_family(
-    session: Session, user: User, *, user_agent: str | None = None
-) -> tuple[str, str]:
+def issue_family(session: Session, user: User, *, user_agent: str | None = None) -> tuple[str, str]:
     settings = get_settings()
     refresh_token = new_opaque_token()
     member = RefreshToken(
@@ -150,11 +148,7 @@ def rotate(
 
 def logout(session: Session, *, refresh_token: str) -> None:
     member = repository.get_refresh_member_by_hash(session, hash_opaque_token(refresh_token))
-    if (
-        member is None
-        or member.status != RefreshTokenStatus.ACTIVE
-        or member.expires_at <= _now()
-    ):
+    if member is None or member.status != RefreshTokenStatus.ACTIVE or member.expires_at <= _now():
         raise AppError(AUTHENTICATION_REQUIRED, "Invalid session", status_code=401)
     _revoke_family(session, member, reason="logout")
 
@@ -201,5 +195,3 @@ def _revoke_family(session: Session, member: RefreshToken, *, reason: str) -> No
         critical=True,
     )
     session.commit()
-
-

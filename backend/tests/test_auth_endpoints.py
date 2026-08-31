@@ -39,9 +39,7 @@ def pg_app():
 
 
 def _login(client: TestClient, email: str, password: str) -> dict:  # type: ignore[type-arg]
-    response = client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
     return response.json()  # type: ignore[no-return-value]
 
@@ -67,9 +65,7 @@ def test_login_failure_is_generic_for_all_cases(pg_app):  # type: ignore[no-unty
         {"email": "ghost@nowhere.ir", "password": "whatever-pass-1"},
         {"email": settings.INITIAL_ADMIN_EMAIL, "password": "wrong-password-1"},
     ]
-    responses = [
-        client.post("/api/v1/auth/login", json=b) for b in bodies
-    ]
+    responses = [client.post("/api/v1/auth/login", json=b) for b in bodies]
     for response in responses:
         assert response.status_code == 401
         assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
@@ -135,9 +131,7 @@ def test_roleless_user_gets_403_on_admin_endpoints(pg_app):  # type: ignore[no-u
     from app.core.security import hash_password
 
     with factory() as session:
-        existing = session.scalar(
-            select(User).where(User.email == "roleless@zarandsteel.ir")
-        )
+        existing = session.scalar(select(User).where(User.email == "roleless@zarandsteel.ir"))
         if existing is None:
             session.add(
                 User(

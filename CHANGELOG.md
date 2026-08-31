@@ -47,6 +47,10 @@ on Keep a Changelog, and this project adheres to Semantic Versioning.
 - Backend deps: added PyJWT, bcrypt, email-validator; requirements floors
   updated
 - README quick start: seed step + auth smoke checks; VERSION → 0.2.0
+- Convergence (2026-08-31): alembic excluded from ruff (matching CI scope);
+  `app`/`tests` reformatted; smoke test extended to 16 checks covering the
+  BFF cookie flow (HttpOnly flags, me, CSRF rejection, logout family kill);
+  pytest 79/79 green with DB integration enabled
 
 ## [0.1.0] - 2026-08-29
 

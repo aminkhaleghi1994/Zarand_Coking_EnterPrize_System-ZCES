@@ -127,9 +127,7 @@ def create_role(
     session: Session = Depends(get_db),
 ) -> RoleOut:
     existing = (
-        session.query(Role)
-        .filter(Role.name == payload.name, Role.deleted_at.is_(None))
-        .first()
+        session.query(Role).filter(Role.name == payload.name, Role.deleted_at.is_(None)).first()
     )
     if existing:
         raise duplicate_resource("A role with this name already exists")
@@ -290,8 +288,3 @@ def revoke_scope(
         before=before,
     )
     return SuccessOut()
-
-
-
-
-

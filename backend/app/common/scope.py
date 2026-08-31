@@ -38,10 +38,7 @@ def _covers(assignment: ScopeAssignmentData, target: ScopeTarget) -> bool:
     if assignment.level == "complex":
         return target.complex_id is not None and assignment.complex_id == target.complex_id
     if assignment.level == "workplace":
-        return (
-            target.workplace_id is not None
-            and assignment.workplace_id == target.workplace_id
-        )
+        return target.workplace_id is not None and assignment.workplace_id == target.workplace_id
     return False
 
 

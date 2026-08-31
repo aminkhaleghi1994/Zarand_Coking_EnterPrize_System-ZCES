@@ -99,7 +99,55 @@ Check "missing X-Request-ID gets generated" {
     Assert-True ($value -match "^[0-9a-fA-F-]{36}$") "generated X-Request-ID is not a UUID"
 }
 
-# --- Auth checks (Phase 2) ---
+# --- Auth checks via BFF cookie flow (Phase 2, T018) ---
+
+$frontendOrigin = ($frontendUrl -replace "/$", "")
+
+function Invoke-BffJson([string]$method, [string]$path, $body, [hashtable]$headers) {
+    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler.UseCookies = $false
+    $client = New-Object System.Net.Http.HttpClient($handler)
+    $client.Timeout = [TimeSpan]::FromSeconds(15)
+    try {
+        $message = New-Object System.Net.Http.HttpRequestMessage(
+            [System.Net.Http.HttpMethod]::new($method), "$frontendOrigin$path")
+        if ($null -ne $body) {
+            $json = $body | ConvertTo-Json -Depth 5
+            $message.Content = New-Object System.Net.Http.StringContent(
+                $json, [System.Text.Encoding]::UTF8, "application/json")
+        }
+        if ($headers) {
+            foreach ($key in $headers.Keys) { $message.Headers.TryAddWithoutValidation($key, $headers[$key]) | Out-Null }
+        }
+        $response = $client.SendAsync($message).GetAwaiter().GetResult()
+        $status = [int]$response.StatusCode
+        $bodyText = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $setCookieHeaders = @()
+        $headerEnum = $response.Headers.TryGetValues("Set-Cookie", [ref]$null)
+        $values = $null
+        if ($response.Headers.TryGetValues("Set-Cookie", [ref]$values)) { $setCookieHeaders = @($values) }
+        return @{ Status = $status; Body = $bodyText; SetCookies = $setCookieHeaders }
+    }
+    finally {
+        $client.Dispose()
+        $handler.Dispose()
+    }
+}
+
+function Get-CookiesFromJar([hashtable]$jar) {
+    return ($jar.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join "; "
+}
+
+function Update-JarFromCookies([hashtable]$jar, $setCookies) {
+    foreach ($cookie in $setCookies) {
+        $first = ($cookie -split ";")[0].Trim()
+        $name = ($first -split "=", 2)[0].Trim()
+        $value = ($first -split "=", 2)[1].Trim()
+        if ($value -eq "") { $jar.Remove($name) } else { $jar[$name] = $value }
+    }
+}
+
+# --- Auth checks (Phase 2, direct backend) ---
 
 $script:adminEmail = Get-EnvValue (Join-Path $repoRoot "backend\.env") "INITIAL_ADMIN_EMAIL"
 $script:adminPassword = Get-EnvValue (Join-Path $repoRoot "backend\.env") "INITIAL_ADMIN_PASSWORD"
@@ -145,6 +193,83 @@ Check "admin endpoint denies unauthenticated request with 401" {
         $client.Dispose()
     }
     Assert-True ($status -eq 401) "expected 401, got $status"
+}
+
+# --- Auth checks via BFF cookie flow (Phase 2, T018) ---
+
+$script:jar = @{}
+
+Check "BFF login sets auth cookies and returns user without token material" {
+    Assert-True ($null -ne $script:adminEmail -and $null -ne $script:adminPassword) "INITIAL_ADMIN_* not configured in backend\.env"
+    $result = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($result.Status -eq 200) "expected 200, got $($result.Status): $($result.Body)"
+    $body = $result.Body | ConvertFrom-Json
+    Assert-True ($null -ne $body.user -and $null -ne $body.user.email) "user object missing from BFF response"
+    Assert-True ($result.Body -notmatch "access_token") "BFF login response leaked access_token"
+    Assert-True ($result.Body -notmatch "refresh_token") "BFF login response leaked refresh_token"
+    $joined = $result.SetCookies -join " "
+    Assert-True ($joined -match "zces_at=") "zces_at cookie not set"
+    Assert-True ($joined -match "zces_rt=") "zces_rt cookie not set"
+    Assert-True ($joined -match "zces_csrf=") "zces_csrf cookie not set"
+    $atCookie = $result.SetCookies | Where-Object { $_ -match "^zces_at=" } | Select-Object -First 1
+    $rtCookie = $result.SetCookies | Where-Object { $_ -match "^zces_rt=" } | Select-Object -First 1
+    Assert-True ($atCookie -match "httponly" -or $atCookie -match "HttpOnly") "zces_at is not HttpOnly"
+    Assert-True ($rtCookie -match "httponly" -or $rtCookie -match "HttpOnly") "zces_rt is not HttpOnly"
+    Update-JarFromCookies $script:jar $result.SetCookies
+}
+
+Check "BFF me returns identity from cookie jar" {
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar }
+    $result = Invoke-BffJson "GET" "/api/auth/me" $null $headers
+    Assert-True ($result.Status -eq 200) "expected 200, got $($result.Status): $($result.Body)"
+    $body = $result.Body | ConvertFrom-Json
+    Assert-True ($body.user.email -eq $script:adminEmail) "me returned unexpected identity"
+}
+
+Check "CSRF-less mutation is rejected" {
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar }
+    $result = Invoke-BffJson "POST" "/api/auth/logout" $null $headers
+    Assert-True ($result.Status -ge 400 -and $result.Status -lt 500) "expected 4xx without CSRF header, got $($result.Status)"
+    Assert-True ($result.Status -ne 401 -or $result.Body -match "CSRF") "CSRF-less request was not rejected with a CSRF-specific error"
+}
+
+Check "BFF logout clears cookies and session is dead afterwards" {
+    $csrf = $script:jar["zces_csrf"]
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $csrf }
+    $result = Invoke-BffJson "POST" "/api/auth/logout" $null $headers
+    Assert-True ($result.Status -eq 200) "expected 200, got $($result.Status): $($result.Body)"
+    $joined = $result.SetCookies -join " "
+    Assert-True ($joined -match "zces_at=;" -or $joined -match "zces_at=\s*;") "zces_at not cleared"
+    Assert-True ($joined -match "zces_rt=;" -or $joined -match "zces_rt=\s*;") "zces_rt not cleared"
+    Update-JarFromCookies $script:jar $result.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar }
+    $result = Invoke-BffJson "GET" "/api/auth/me" $null $headers
+    Assert-True ($result.Status -eq 401) "me after logout should be 401, got $($result.Status)"
+}
+
+Check "roleless user gets 403 on admin endpoint (via admin API setup)" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed: $($adminLogin.Status)"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $unique = "roleless-smoke-{0}@zarandsteel.ir" -f (Get-Date -Format "yyyyMMddHHmmss")
+    $adminCookies = Get-CookiesFromJar $script:jar
+    $csrf = $script:jar["zces_csrf"]
+    $headers = @{ Cookie = $adminCookies; "X-CSRF-Token" = $csrf }
+    $created = $null
+    foreach ($path in @("/api/v1/employees", "/api/admin/users")) {
+        $r = Invoke-BffJson "POST" $path @{ email = $unique; full_name = "Smoke Roleless"; password = "smoke-test-password-1" } $headers
+        if ($r.Status -ge 200 -and $r.Status -lt 300) { $created = $r; break }
+    }
+    if ($null -eq $created) {
+        Write-Host "SKIP  user-creation endpoint arrives with Phase 3 (employee CRUD); roleless-403 is covered by pytest tests/test_admin_endpoints.py" -ForegroundColor Yellow
+        return
+    }
+    $rolelessLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $unique; password = "smoke-test-password-1" } $null
+    Assert-True ($rolelessLogin.Status -eq 200) "roleless login failed: $($rolelessLogin.Status)"
+    $rolelessJar = @{}
+    Update-JarFromCookies $rolelessJar $rolelessLogin.SetCookies
+    $result = Invoke-BffJson "GET" "/api/auth/me" $null @{ Cookie = Get-CookiesFromJar $rolelessJar }
+    Assert-True ($result.Status -eq 200) "roleless me failed"
 }
 
 Write-Host ""

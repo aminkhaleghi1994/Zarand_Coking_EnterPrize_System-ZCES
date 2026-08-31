@@ -18,7 +18,6 @@ class Base(DeclarativeBase):
     pass
 
 
-
 def init_engine(settings: Settings) -> Engine:
     global _engine, _session_factory
     database_url = settings.DATABASE_URL

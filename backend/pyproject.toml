@@ -8,6 +8,7 @@ requires-python = ">=3.12"
 line-length = 100
 target-version = "py312"
 src = ["app", "tests"]
+extend-exclude = ["alembic"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "SIM"]

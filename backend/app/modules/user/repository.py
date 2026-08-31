@@ -31,9 +31,7 @@ def get_active_user_by_email(session: Session, email: str) -> User | None:
 
 
 def get_active_user_by_id(session: Session, user_id: uuid.UUID) -> User | None:
-    return session.scalar(
-        select(User).where(User.id == user_id, User.deleted_at.is_(None))
-    )
+    return session.scalar(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
 
 
 def get_role_by_id(session: Session, role_id: uuid.UUID) -> Role | None:
@@ -58,8 +56,7 @@ def get_scope_assignment(
 
 def list_roles(session: Session, params: PageParams) -> Page[RoleOut]:
     total = (
-        session.scalar(select(func.count()).select_from(Role).where(Role.deleted_at.is_(None)))
-        or 0
+        session.scalar(select(func.count()).select_from(Role).where(Role.deleted_at.is_(None))) or 0
     )
     rows = session.scalars(
         select(Role)
@@ -68,8 +65,12 @@ def list_roles(session: Session, params: PageParams) -> Page[RoleOut]:
         .offset((params.page - 1) * params.page_size)
         .limit(params.page_size)
     ).all()
-    return Page[RoleOut](items=[RoleOut.model_validate(r) for r in rows], total=total,
-                         page=params.page, page_size=params.page_size)
+    return Page[RoleOut](
+        items=[RoleOut.model_validate(r) for r in rows],
+        total=total,
+        page=params.page,
+        page_size=params.page_size,
+    )
 
 
 def list_permissions(session: Session, params: PageParams) -> Page[PermissionOut]:
@@ -82,14 +83,15 @@ def list_permissions(session: Session, params: PageParams) -> Page[PermissionOut
     ).all()
     return Page[PermissionOut](
         items=[PermissionOut.model_validate(r) for r in rows],
-        total=total, page=params.page, page_size=params.page_size,
+        total=total,
+        page=params.page,
+        page_size=params.page_size,
     )
 
 
 def list_users(session: Session, params: PageParams) -> Page[UserOut]:
     total = (
-        session.scalar(select(func.count()).select_from(User).where(User.deleted_at.is_(None)))
-        or 0
+        session.scalar(select(func.count()).select_from(User).where(User.deleted_at.is_(None))) or 0
     )
     rows = session.scalars(
         select(User)
@@ -98,8 +100,12 @@ def list_users(session: Session, params: PageParams) -> Page[UserOut]:
         .offset((params.page - 1) * params.page_size)
         .limit(params.page_size)
     ).all()
-    return Page[UserOut](items=[UserOut.model_validate(r) for r in rows], total=total,
-                         page=params.page, page_size=params.page_size)
+    return Page[UserOut](
+        items=[UserOut.model_validate(r) for r in rows],
+        total=total,
+        page=params.page,
+        page_size=params.page_size,
+    )
 
 
 def get_user_role_names(session: Session, user_id: uuid.UUID) -> list[str]:
@@ -138,14 +144,13 @@ def load_scope_context(session: Session, user_id: str) -> ScopeContext | None:
             select(ScopeAssignment).where(ScopeAssignment.user_id == uid)
         ).all()
     )
-    return ScopeContext(user_id=user_id, is_active=True,
-                        permission_codes=permission_codes, scopes=assignments)
+    return ScopeContext(
+        user_id=user_id, is_active=True, permission_codes=permission_codes, scopes=assignments
+    )
 
 
 def get_user_scopes(session: Session, user_id: uuid.UUID) -> list[ScopeAssignmentOut]:
-    rows = session.scalars(
-        select(ScopeAssignment).where(ScopeAssignment.user_id == user_id)
-    ).all()
+    rows = session.scalars(select(ScopeAssignment).where(ScopeAssignment.user_id == user_id)).all()
     return [ScopeAssignmentOut.model_validate(r) for r in rows]
 
 

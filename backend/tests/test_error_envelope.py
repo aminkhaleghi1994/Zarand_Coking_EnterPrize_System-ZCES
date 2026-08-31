@@ -66,9 +66,7 @@ def test_unhandled_exception_is_logged_with_traceback(
     error_records = [record for record in caplog.records if record.levelno >= logging.ERROR]
     assert error_records
     assert any(record.exc_info for record in error_records)
-    assert "boom-secret-internals" in error_records[0].getMessage() + str(
-        error_records[0].exc_info
-    )
+    assert "boom-secret-internals" in error_records[0].getMessage() + str(error_records[0].exc_info)
 
 
 def test_method_not_allowed_maps_to_business_rule(client: TestClient) -> None:

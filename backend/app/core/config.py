@@ -50,9 +50,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _validate_jwt_config(self) -> "Settings":
         if len(self.JWT_SECRET_KEY) < 16:
-            raise SettingsValidationError(
-                "JWT_SECRET_KEY must be at least 16 characters long"
-            )
+            raise SettingsValidationError("JWT_SECRET_KEY must be at least 16 characters long")
         if self.ACCESS_TOKEN_EXPIRE_MINUTES < 1:
             raise SettingsValidationError("ACCESS_TOKEN_EXPIRE_MINUTES must be >= 1")
         if self.REFRESH_TOKEN_EXPIRE_DAYS < 1:

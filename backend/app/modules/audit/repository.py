@@ -41,5 +41,7 @@ def list_audit_logs(
     ).all()
     return Page[AuditOut](
         items=[AuditOut.model_validate(r) for r in rows],
-        total=total, page=page, page_size=page_size,
+        total=total,
+        page=page,
+        page_size=page_size,
     )

@@ -39,4 +39,3 @@ def list_audit_logs(
             for item in page.items
         ]
     return page
-
