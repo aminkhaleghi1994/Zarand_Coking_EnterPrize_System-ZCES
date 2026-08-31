@@ -212,7 +212,7 @@ def _setup_placement(
 def test_list_placements_include_empty_toggle(pg):  # type: ignore[no-untyped-def]
     _client, factory = pg
     context = _admin_context(factory)
-    placement_id, _warehouse_id, _workplace_id, _complex_id = _setup_placement(
+    placement_id, warehouse_id, _workplace_id, _complex_id = _setup_placement(
         factory, workplace_code="CP1", quantity="3"
     )
     from decimal import Decimal
@@ -225,9 +225,15 @@ def test_list_placements_include_empty_toggle(pg):  # type: ignore[no-untyped-de
         placement.quantity = Decimal("0")
         session.commit()
 
-        strict = repository.list_placements(session, context, PageParams(page_size=100))
+        strict = repository.list_placements(
+            session, context, PageParams(page_size=100), warehouse_id=warehouse_id
+        )
         inclusive = repository.list_placements(
-            session, context, PageParams(page_size=100), include_empty=True
+            session,
+            context,
+            PageParams(page_size=100),
+            warehouse_id=warehouse_id,
+            include_empty=True,
         )
 
     assert all(p.id != placement_id for p in strict.items)
@@ -238,7 +244,7 @@ def test_list_placements_include_empty_toggle(pg):  # type: ignore[no-untyped-de
 def test_list_placements_scope_denial(pg):  # type: ignore[no-untyped-def]
     _client, factory = pg
     admin_context = _admin_context(factory)
-    placement_id, _warehouse_id, workplace_id, _complex_id = _setup_placement(
+    placement_id, warehouse_id, _workplace_id, _complex_id = _setup_placement(
         factory, workplace_code="SP", quantity="7"
     )
     from app.common.scope import ScopeAssignmentData, ScopeContext
@@ -260,9 +266,14 @@ def test_list_placements_scope_denial(pg):  # type: ignore[no-untyped-def]
 
     with factory() as session:
         keeper_page = repository.list_placements(
-            session, keeper_context_cp1, PageParams(page_size=100)
+            session,
+            keeper_context_cp1,
+            PageParams(page_size=100),
+            warehouse_id=warehouse_id,
         )
-        admin_page = repository.list_placements(session, admin_context, PageParams(page_size=100))
+        admin_page = repository.list_placements(
+            session, admin_context, PageParams(page_size=100), warehouse_id=warehouse_id
+        )
 
     assert all(p.id != placement_id for p in keeper_page.items)
     assert any(p.id == placement_id for p in admin_page.items)

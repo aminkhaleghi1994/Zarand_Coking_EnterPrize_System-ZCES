@@ -335,21 +335,25 @@ def test_workplace_scoped_keeper_sees_only_own_warehouse(pg):  # type: ignore[no
     ).json()
 
     keeper_token = _scoped_keeper_token(client, factory, "scope", cp1)
-    listing = client.get(
-        "/api/v1/warehouse/warehouses",
-        params={"workplace_id": str(cp1), "page_size": 100},
-        headers=_bearer(keeper_token),
-    )
-    assert listing.status_code == 200, listing.text
-    ids = [item["id"] for item in listing.json()["items"]]
-    assert own["id"] in ids
-    assert other["id"] not in ids
 
-    full_listing = client.get(
-        "/api/v1/warehouse/warehouses", params={"page_size": 100}, headers=_bearer(keeper_token)
-    )
-    all_ids = [item["id"] for item in full_listing.json()["items"]]
-    assert other["id"] not in all_ids
+    collected: list[dict] = []
+    page = 1
+    while True:
+        listing = client.get(
+            "/api/v1/warehouse/warehouses",
+            params={"page": page, "page_size": 100},
+            headers=_bearer(keeper_token),
+        )
+        assert listing.status_code == 200, listing.text
+        body = listing.json()
+        collected.extend(body["items"])
+        if len(collected) >= body["total"] or page > 50:
+            break
+        page += 1
+
+    assert all(item["workplace_id"] == str(cp1) for item in collected)
+    assert other["id"] not in [item["id"] for item in collected]
+    assert own["id"] in [item["id"] for item in collected]
 
     denied = client.post(
         "/api/v1/warehouse/warehouses",
