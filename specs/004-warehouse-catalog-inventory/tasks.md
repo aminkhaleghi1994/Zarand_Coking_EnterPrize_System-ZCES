@@ -147,3 +147,11 @@ surfaces — not new features.
   conversion, no transfers, no expiry/lot tracking in this phase.
 - Commit after each phase checkpoint (Conventional Commits);
   `/speckit.analyze` runs before implementation starts.
+
+## Phase 9: Convergence
+
+- [x] T035 Create `backend/app/modules/warehouse/contracts.py` exposing the Phase-5 interface per contracts/warehouse-contract.md: `get_item`, `get_placement_for_stock`, `get_shelf_context`, and `apply_fulfillment_issue` (caller-owned transaction, FOR UPDATE, writes a `fulfillment` movement via the same ledger helpers, raises `AppError(INSUFFICIENT_STOCK)` on overdraw) + integration tests for each function (plan: structure decision, missing)
+- [x] T036 Add Zod schemas for the warehouse item form to `frontend/src/lib/schemas.ts` mirroring backend validation (bilingual name required, optional code, unit, min_quantity ≥ 0, ≤3 decimals) with i18n message-key error strings, wire into `CatalogView` `ItemForm` fields (T008 residual, partial)
+- [x] T037 Extend `backend/tests/test_warehouse_repository.py`: cover `list_placements` `include_empty` toggle, workplace-scoped placement visibility (cross-scope denial without existence leak), and `name_norm` ordering; extend `list_warehouses` scope-union test (T010/T015 residual, partial)
+- [x] T038 Add the Warehouse module section to README.md (module map, 17 permission codes, WarehouseKeeper/WarehouseApprover role split, stock-integrity rules) per T033's stated scope (T033 residual, missing)
+- [x] T039 Fix the debounce in `frontend/src/features/warehouse/CatalogView.tsx` to cancel the previous timer on each keystroke (useRef + clearTimeout), matching the intended 300ms behavior; keep the Phase-3 EmployeeTable pattern untouched (polish, partial)

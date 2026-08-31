@@ -39,6 +39,7 @@ class MovementType(enum.StrEnum):
     RECEIVE = "receive"
     ISSUE = "issue"
     ADJUST = "adjust"
+    FULFILLMENT = "fulfillment"
 
 
 class ItemCatalog(AuditableEntity, Base):

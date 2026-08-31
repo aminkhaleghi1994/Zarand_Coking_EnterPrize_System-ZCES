@@ -285,6 +285,14 @@
       "AUTHENTICATION_REQUIRED": "Please sign in first.",
       "INTERNAL_ERROR": "Something went wrong. Please try again.",
       "generic": "The operation failed. Please try again."
+    },
+    "validation": {
+      "nameRequired": "Name is required (max 200 characters).",
+      "nameFaRequired": "Persian name is required (max 200 characters).",
+      "codeTooLong": "Item code must be at most 50 characters.",
+      "unitRequired": "Unit of measure is required (max 30 characters).",
+      "minQuantityInvalid": "Minimum quantity must be a non-negative number with up to 3 decimals.",
+      "descriptionTooLong": "Description must be at most 1000 characters."
     }
   },
   "admin": {

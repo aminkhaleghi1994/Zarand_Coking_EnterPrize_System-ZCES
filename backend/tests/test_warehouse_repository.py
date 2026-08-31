@@ -139,3 +139,139 @@ def test_search_pagination_envelope(pg):  # type: ignore[no-untyped-def]
     assert len(page.items) == 2
     assert page.page == 1
     assert page.page_size == 2
+    names = [item.name for item in page.items]
+    assert names == sorted(names, key=str.lower)
+
+
+@requires_db
+def test_search_items_ordered_by_name_norm(pg):  # type: ignore[no-untyped-def]
+    _client, factory = pg
+    context = _admin_context(factory)
+    tag = _unique_tag()
+    with factory() as session:
+        for index, name in enumerate([f"Zebra {tag}", f"alpha {tag}", f"Middle {tag}"]):
+            service.create_item(
+                session,
+                context,
+                ItemCreateIn(**_item_payload(f"{tag}-{index}", name=name)),  # type: ignore[arg-type]
+            )
+        page = repository.search_items(session, PageParams(page_size=100), search=tag)
+    assert [item.name for item in page.items] == [f"alpha {tag}", f"Middle {tag}", f"Zebra {tag}"]
+
+
+def _setup_placement(
+    factory,
+    *,
+    workplace_code: str,
+    quantity: str,  # type: ignore[no-untyped-def]
+) -> tuple[uuid.UUID, uuid.UUID, str, str]:
+    """Direct-insert a warehouse/shelf/placement under the given workplace.
+
+    Returns (placement_id, warehouse_id, workplace_id, complex_id) as strings
+    where applicable — used for scope and include-empty repository tests.
+    """
+    from decimal import Decimal
+
+    from app.modules.user.models import Complex, Workplace
+    from app.modules.warehouse.models import InventoryPlacement, ItemCatalog, Shelf, Warehouse
+
+    tag = _unique_tag()
+    with factory() as session:
+        workplace = session.scalar(select(Workplace).where(Workplace.code == workplace_code))
+        assert workplace is not None
+        complex_ = session.get(Complex, workplace.complex_id)
+        assert complex_ is not None
+        item = ItemCatalog(
+            name=f"Placement item {tag}",
+            name_fa=f"کالای موجودی {tag}",
+            name_norm=f"placement item {tag}",
+            unit="ad",
+        )
+        warehouse = Warehouse(
+            workplace_id=workplace.id,
+            company_id=complex_.company_id,
+            complex_id=complex_.id,
+            code=f"WHR-{tag}",
+            name="Placement warehouse",
+            name_fa="انبار موجودی",
+        )
+        session.add_all([item, warehouse])
+        session.flush()
+        shelf = Shelf(warehouse_id=warehouse.id, code="R-1")
+        session.add(shelf)
+        session.flush()
+        placement = InventoryPlacement(
+            shelf_id=shelf.id, item_id=item.id, quantity=Decimal(quantity)
+        )
+        session.add(placement)
+        session.commit()
+        return placement.id, warehouse.id, str(workplace.id), str(complex_.id)
+
+
+@requires_db
+def test_list_placements_include_empty_toggle(pg):  # type: ignore[no-untyped-def]
+    _client, factory = pg
+    context = _admin_context(factory)
+    placement_id, _warehouse_id, _workplace_id, _complex_id = _setup_placement(
+        factory, workplace_code="CP1", quantity="3"
+    )
+    from decimal import Decimal
+
+    from app.modules.warehouse.models import InventoryPlacement
+
+    with factory() as session:
+        placement = session.get(InventoryPlacement, placement_id)
+        assert placement is not None
+        placement.quantity = Decimal("0")
+        session.commit()
+
+        strict = repository.list_placements(session, context, PageParams(page_size=100))
+        inclusive = repository.list_placements(
+            session, context, PageParams(page_size=100), include_empty=True
+        )
+
+    assert all(p.id != placement_id for p in strict.items)
+    assert any(p.id == placement_id for p in inclusive.items)
+
+
+@requires_db
+def test_list_placements_scope_denial(pg):  # type: ignore[no-untyped-def]
+    _client, factory = pg
+    admin_context = _admin_context(factory)
+    placement_id, _warehouse_id, workplace_id, _complex_id = _setup_placement(
+        factory, workplace_code="SP", quantity="7"
+    )
+    from app.common.scope import ScopeAssignmentData, ScopeContext
+
+    keeper_context_cp1 = ScopeContext(
+        user_id=str(uuid.uuid4()),
+        is_active=True,
+        permission_codes=frozenset({"warehouse:stock:read"}),
+        scopes=(
+            ScopeAssignmentData(
+                level="workplace",
+                module="warehouse",
+                resource="stock",
+                operation="read",
+                workplace_id=_workplace_id_cp1(factory),
+            ),
+        ),
+    )
+
+    with factory() as session:
+        keeper_page = repository.list_placements(
+            session, keeper_context_cp1, PageParams(page_size=100)
+        )
+        admin_page = repository.list_placements(session, admin_context, PageParams(page_size=100))
+
+    assert all(p.id != placement_id for p in keeper_page.items)
+    assert any(p.id == placement_id for p in admin_page.items)
+
+
+def _workplace_id_cp1(factory) -> str:  # type: ignore[no-untyped-def]
+    from app.modules.user.models import Workplace
+
+    with factory() as session:
+        workplace = session.scalar(select(Workplace).where(Workplace.code == "CP1"))
+        assert workplace is not None
+        return str(workplace.id)

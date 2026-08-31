@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   type ApiError,
   type WarehouseItem,
 } from "@/lib/client-api";
+import { WarehouseItemInputSchema } from "@/lib/schemas";
 
 import { warehouseErrorMessage } from "./shared";
 
@@ -53,13 +54,17 @@ export function CatalogView() {
       warehouseApi.items.list({ search: debounced || undefined, page, pageSize: 20 }, signal),
   });
 
+  const searchDebounce = useRef<number | null>(null);
+
   const onSearchChange = (value: string) => {
     setSearch(value);
-    const timer = setTimeout(() => {
+    if (searchDebounce.current !== null) {
+      window.clearTimeout(searchDebounce.current);
+    }
+    searchDebounce.current = window.setTimeout(() => {
       setDebounced(value);
       setPage(1);
     }, 300);
-    return () => clearTimeout(timer);
   };
 
   const invalidate = () => {
@@ -68,24 +73,33 @@ export function CatalogView() {
 
   const save = useMutation({
     mutationFn: (state: FormState) => {
-      const payload = {
+      const parsed = WarehouseItemInputSchema.safeParse({
         name: state.name,
         name_fa: state.name_fa,
         code: state.code || null,
         unit: state.unit,
         min_quantity: state.min_quantity,
         description: state.description || null,
-      };
+      });
+      if (!parsed.success) {
+        const message = parsed.error.issues[0]?.message ?? "warehouse.errors.generic";
+        throw Object.assign(new Error(message), { i18nKey: true });
+      }
       return state.id
-        ? warehouseApi.items.update(state.id, { ...payload, version: state.version })
-        : warehouseApi.items.create(payload);
+        ? warehouseApi.items.update(state.id, { ...parsed.data, version: state.version })
+        : warehouseApi.items.create(parsed.data);
     },
     onSuccess: () => {
       setFormError(null);
       setForm(null);
       invalidate();
     },
-    onError: (error: ApiError) => setFormError(warehouseErrorMessage(t, error)),
+    onError: (error: ApiError & { i18nKey?: boolean }) =>
+      setFormError(
+        error.i18nKey && t.has(error.message)
+          ? t(error.message)
+          : warehouseErrorMessage(t, error),
+      ),
   });
 
   const retire = useMutation({

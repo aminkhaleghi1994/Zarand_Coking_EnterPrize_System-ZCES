@@ -198,7 +198,7 @@ def upgrade() -> None:
         sa.Column("resulting_quantity", sa.Numeric(14, 3), nullable=False),
         sa.Column("reason", sa.String(length=500), nullable=True),
         sa.CheckConstraint(
-            "movement_type IN ('receive','issue','adjust')",
+            "movement_type IN ('receive','issue','adjust','fulfillment')",
             name="ck_stock_movements_movement_type",
         ),
     )

@@ -359,7 +359,9 @@ class TestEmployeeListingAndScope:
         viewer_token = viewer_login.json()["access_token"]
 
         listed = client.get(
-            "/api/v1/employees", params={"page_size": 50}, headers=_bearer(viewer_token)
+            "/api/v1/employees",
+            params={"search": created["national_id"], "page_size": 50},
+            headers=_bearer(viewer_token),
         )
         assert listed.status_code == 200
         items = listed.json()["items"]
