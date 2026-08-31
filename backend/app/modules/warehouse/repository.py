@@ -19,10 +19,12 @@ from app.modules.warehouse.models import (
     InventoryPlacement,
     ItemCatalog,
     Shelf,
+    StockAlert,
     StockMovement,
     Warehouse,
 )
 from app.modules.warehouse.schemas import (
+    AlertOut,
     ItemOut,
     MovementOut,
     PlacementOut,
@@ -394,7 +396,9 @@ def get_placement_bundle(
         .join(ItemCatalog, InventoryPlacement.item_id == ItemCatalog.id)
         .where(InventoryPlacement.id == placement_id)
     ).first()
-    return row
+    if row is None:
+        return None
+    return row[0], row[1], row[2], row[3]
 
 
 def lock_placement(session: Session, placement_id: UUID) -> InventoryPlacement | None:
@@ -481,3 +485,65 @@ def list_movements(
         page=params.page,
         page_size=params.page_size,
     )
+
+
+# --- Low-stock alerts (US4) ---
+
+
+def to_alert_out(
+    alert: StockAlert,
+    placement: InventoryPlacement,
+    item: ItemCatalog,
+    shelf: Shelf,
+    warehouse: Warehouse,
+) -> AlertOut:
+    from app.modules.warehouse.schemas import ItemBriefOut, ShelfBriefOut, WarehouseBriefOut
+
+    return AlertOut(
+        id=alert.id,
+        placement_id=alert.placement_id,
+        item=ItemBriefOut(
+            id=item.id,
+            name=item.name,
+            name_fa=item.name_fa,
+            code=item.code,
+            unit=item.unit,
+            min_quantity=format_quantity(item.min_quantity),
+        ),
+        shelf=ShelfBriefOut(id=shelf.id, code=shelf.code, name=shelf.name),
+        warehouse=WarehouseBriefOut(id=warehouse.id, code=warehouse.code, name=warehouse.name),
+        quantity_at_alert=format_quantity(alert.quantity_at_alert),
+        threshold_at_alert=format_quantity(alert.threshold_at_alert),
+        current_quantity=format_quantity(placement.quantity),
+        raised_at=alert.created_at,
+        resolved_at=alert.resolved_at,
+    )
+
+
+def list_alerts(
+    session: Session,
+    context: ScopeContext,
+    params: PageParams,
+    *,
+    status: str = "active",
+) -> Page[AlertOut]:
+    base = (
+        select(StockAlert, InventoryPlacement, ItemCatalog, Shelf, Warehouse)
+        .join(InventoryPlacement, StockAlert.placement_id == InventoryPlacement.id)
+        .join(ItemCatalog, StockAlert.item_id == ItemCatalog.id)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .where(_warehouse_scope_filter(context, "warehouse:alert:read"))
+    )
+    if status == "active":
+        base = base.where(StockAlert.resolved_at.is_(None))
+    elif status == "resolved":
+        base = base.where(StockAlert.resolved_at.is_not(None))
+    total = session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    rows = session.execute(
+        base.order_by(StockAlert.created_at.desc(), StockAlert.id.desc())
+        .offset((params.page - 1) * params.page_size)
+        .limit(params.page_size)
+    ).all()
+    items = [to_alert_out(*row) for row in rows]
+    return Page[AlertOut](items=items, total=total, page=params.page, page_size=params.page_size)

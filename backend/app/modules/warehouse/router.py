@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.common.pagination import Page
@@ -11,6 +11,7 @@ from app.modules.user.schemas import PageParams
 from app.modules.warehouse import repository, service
 from app.modules.warehouse.schemas import (
     AdjustIn,
+    AlertOut,
     IssueIn,
     ItemCreateIn,
     ItemOut,
@@ -45,6 +46,7 @@ require_stock_read = require_operation("warehouse:stock:read")
 require_stock_receive = require_operation("warehouse:stock:receive")
 require_stock_issue = require_operation("warehouse:stock:issue")
 require_stock_adjust = require_operation("warehouse:stock:adjust")
+require_alert_read = require_operation("warehouse:alert:read")
 
 router = APIRouter(tags=["warehouse"])
 
@@ -258,3 +260,17 @@ def get_movements(
     session: Session = Depends(get_db),
 ) -> Page[MovementOut]:
     return repository.list_movements(session, context, params, placement_id=placement_id)
+
+
+# --- Low-stock alerts (US4) ---
+
+
+@router.get("/warehouse/alerts", response_model=Page[AlertOut])
+def get_alerts(
+    params: PageParams = Depends(),
+    active: str = Query(default="active", pattern="^(true|false|all)$"),
+    context: ScopeContext = Depends(require_alert_read),
+    session: Session = Depends(get_db),
+) -> Page[AlertOut]:
+    status = {"true": "active", "false": "resolved", "all": "all"}[active]
+    return repository.list_alerts(session, context, params, status=status)

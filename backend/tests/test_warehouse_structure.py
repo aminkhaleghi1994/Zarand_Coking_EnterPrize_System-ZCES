@@ -335,11 +335,21 @@ def test_workplace_scoped_keeper_sees_only_own_warehouse(pg):  # type: ignore[no
     ).json()
 
     keeper_token = _scoped_keeper_token(client, factory, "scope", cp1)
-    listing = client.get("/api/v1/warehouse/warehouses", headers=_bearer(keeper_token))
+    listing = client.get(
+        "/api/v1/warehouse/warehouses",
+        params={"workplace_id": str(cp1), "page_size": 100},
+        headers=_bearer(keeper_token),
+    )
     assert listing.status_code == 200, listing.text
     ids = [item["id"] for item in listing.json()["items"]]
     assert own["id"] in ids
     assert other["id"] not in ids
+
+    full_listing = client.get(
+        "/api/v1/warehouse/warehouses", params={"page_size": 100}, headers=_bearer(keeper_token)
+    )
+    all_ids = [item["id"] for item in full_listing.json()["items"]]
+    assert other["id"] not in all_ids
 
     denied = client.post(
         "/api/v1/warehouse/warehouses",

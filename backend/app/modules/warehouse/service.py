@@ -11,6 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -227,6 +228,7 @@ def retire_item(
         item.updated_by = uuid.UUID(context.user_id)
         item.version += 1
         session.add(item)
+        _resolve_alerts_for_retirement(session, item_id=item.id, reason="item_retired")
         write_audit(
             session,
             action="ITEM_RETIRED",
@@ -417,6 +419,9 @@ def retire_warehouse(
         warehouse.updated_by = uuid.UUID(context.user_id)
         warehouse.version += 1
         session.add(warehouse)
+        _resolve_alerts_for_retirement(
+            session, warehouse_id=warehouse.id, reason="placement_retired"
+        )
         write_audit(
             session,
             action="WAREHOUSE_RETIRED",
@@ -544,6 +549,7 @@ def retire_shelf(
         shelf.updated_by = uuid.UUID(context.user_id)
         shelf.version += 1
         session.add(shelf)
+        _resolve_alerts_for_retirement(session, shelf_id=shelf.id, reason="placement_retired")
         write_audit(
             session,
             action="SHELF_RETIRED",
@@ -605,7 +611,98 @@ def _placement_movement_snapshot(
 
 
 def _evaluate_alert(session: Session, placement: InventoryPlacement, item: ItemCatalog) -> None:
-    """US4 wires alert evaluation here (T026); kept as a hook point."""
+    """Episode semantics (spec FR-016/FR-017, research R7): raise one active
+    alert per below-threshold episode; resolve on recovery; audited in the
+    same transaction as the movement that caused the transition."""
+    from app.modules.warehouse.models import StockAlert
+
+    below = placement.quantity < item.min_quantity
+    active = session.scalar(
+        select(StockAlert).where(
+            StockAlert.placement_id == placement.id,
+            StockAlert.resolved_at.is_(None),
+        )
+    )
+    if below and active is None:
+        alert = StockAlert(
+            placement_id=placement.id,
+            item_id=item.id,
+            quantity_at_alert=quantize_quantity(placement.quantity),
+            threshold_at_alert=quantize_quantity(item.min_quantity),
+        )
+        session.add(alert)
+        session.flush()
+        write_audit(
+            session,
+            action="STOCK_ALERT_RAISED",
+            entity_type="stock_alert",
+            entity_id=alert.id,
+            actor_user_id=None,
+            after={
+                "placement_id": str(placement.id),
+                "item_id": str(item.id),
+                "quantity_at_alert": format_quantity(placement.quantity),
+                "threshold_at_alert": format_quantity(item.min_quantity),
+            },
+            critical=True,
+        )
+    elif not below and active is not None:
+        active.resolved_at = datetime.now(UTC)
+        active.resolve_reason = "recovered"
+        session.add(active)
+        session.flush()
+        write_audit(
+            session,
+            action="STOCK_ALERT_RESOLVED",
+            entity_type="stock_alert",
+            entity_id=active.id,
+            actor_user_id=None,
+            after={
+                "placement_id": str(placement.id),
+                "resolve_reason": "recovered",
+            },
+            critical=True,
+        )
+
+
+def _resolve_alerts_for_retirement(
+    session: Session,
+    *,
+    shelf_id: uuid.UUID | None = None,
+    item_id: uuid.UUID | None = None,
+    warehouse_id: uuid.UUID | None = None,
+    reason: str,
+) -> None:
+    """Retiring a shelf, item or warehouse ends its below-threshold episodes (FR-017)."""
+    from app.modules.warehouse.models import StockAlert
+
+    statement = select(StockAlert).where(
+        StockAlert.resolved_at.is_(None),
+    )
+    if shelf_id is not None or warehouse_id is not None:
+        statement = statement.join(
+            InventoryPlacement, StockAlert.placement_id == InventoryPlacement.id
+        ).join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+    if shelf_id is not None:
+        statement = statement.where(InventoryPlacement.shelf_id == shelf_id)
+    if warehouse_id is not None:
+        statement = statement.where(Shelf.warehouse_id == warehouse_id)
+    if item_id is not None:
+        statement = statement.where(StockAlert.item_id == item_id)
+    for alert in session.scalars(statement).all():
+        alert.resolved_at = datetime.now(UTC)
+        alert.resolve_reason = reason
+        session.add(alert)
+        session.flush()
+        write_audit(
+            session,
+            action="STOCK_ALERT_RESOLVED",
+            entity_type="stock_alert",
+            entity_id=alert.id,
+            actor_user_id=None,
+            after={"resolve_reason": reason},
+            critical=True,
+        )
 
 
 def receive_stock(
@@ -682,8 +779,10 @@ def issue_stock(
     placement, item, shelf, warehouse = _load_stock_bundle(
         session, context, payload.placement_id, _STOCK_ISSUE
     )
-    placement = repository.lock_placement(session, placement.id)
-    assert placement is not None
+    locked = repository.lock_placement(session, placement.id)
+    if locked is None:
+        raise not_found("Placement not found")
+    placement = locked
     quantity = quantize_quantity(payload.quantity)
     current = quantize_quantity(placement.quantity)
     if quantity > current:
@@ -735,8 +834,10 @@ def adjust_stock(
     placement, item, shelf, warehouse = _load_stock_bundle(
         session, context, payload.placement_id, _STOCK_ADJUST
     )
-    placement = repository.lock_placement(session, placement.id)
-    assert placement is not None
+    locked = repository.lock_placement(session, placement.id)
+    if locked is None:
+        raise not_found("Placement not found")
+    placement = locked
     target = quantize_quantity(payload.quantity)
     current = quantize_quantity(placement.quantity)
     delta = quantize_quantity(target - current)
