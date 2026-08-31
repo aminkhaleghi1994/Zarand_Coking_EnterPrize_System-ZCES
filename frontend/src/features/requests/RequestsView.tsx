@@ -178,7 +178,7 @@ function RequestCard({ request, canDecide, canFulfill, onError }: RequestCardPro
       {request.status === "approved" && canFulfill ? (
         <div>
           <Button type="button" onClick={() => setFulfilling(true)} className="h-11 rounded-md">
-            {t("fulfill")}
+            {t("fulfill.title")}
           </Button>
         </div>
       ) : null}
