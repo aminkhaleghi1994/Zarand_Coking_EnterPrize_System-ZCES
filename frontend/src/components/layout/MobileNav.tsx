@@ -56,7 +56,7 @@ export function MobileNav({ brand }: { brand: React.ReactNode }) {
           <div
             role="presentation"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-ink/40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200"
+            className="absolute inset-0 bg-black/40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200"
           />
           <div
             role="dialog"

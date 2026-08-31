@@ -6,27 +6,11 @@
 
 /*
  * DESIGN.md tokens (single source of truth for visual work).
- * Brand palette + two-tier radius + Soft Lift shadow, exposed both as
- * Tailwind utilities (bg-canvas, text-ink, shadow-soft-lift, ...) and as
- * the values behind shadcn semantic variables in :root below.
+ * The palette is exposed through CSS variables so the `.dark` class can
+ * flip every surface while utilities (bg-canvas, text-ink, ...) stay
+ * identical in both themes. Static @theme keeps non-flipping tokens.
  */
 @theme {
-  --color-canvas: #ffffff;
-  --color-ink: #1a1a1a;
-  --color-ink-soft: #292929;
-  --color-charcoal: #3d3d3d;
-  --color-graphite: #636363;
-  --color-cloud: #f7f7f7;
-  --color-fog: #e8e8e8;
-  --color-steel: #c2c2c2;
-  --color-brand: #024ad8;
-  --color-brand-bright: #296ef9;
-  --color-brand-deep: #0e3191;
-  --color-brand-soft: #c9e0fc;
-  --color-bloom-deep: #b3262b;
-  --color-bloom-wine: #5a1313;
-  --color-storm-deep: #356373;
-
   --shadow-soft-lift: 0 2px 8px rgba(26, 26, 26, 0.08);
   --shadow-floating-modal: 0 8px 24px rgba(26, 26, 26, 0.12);
 
@@ -70,6 +54,27 @@
   --color-card: var(--card);
 
   /*
+   * DESIGN.md palette — light values in :root, dark overrides in .dark.
+   * `slab` is the always-dark brand surface (utility strip, footer, login
+   * brand panel); `canvas`/`cloud` flip as page/card surfaces.
+   */
+  --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
+  --color-slab: var(--slab);
+  --color-charcoal: var(--charcoal);
+  --color-graphite: var(--graphite);
+  --color-cloud: var(--cloud);
+  --color-fog: var(--fog);
+  --color-steel: var(--steel);
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-bloom-deep: var(--bloom-deep);
+  --color-bloom-wine: var(--bloom-wine);
+  --color-storm-deep: var(--storm-deep);
+
+  /*
    * Two-tier radius (DESIGN.md): buttons and inputs stay sharp at 4px
    * (rounded-md / rounded-lg), cards and photo frames stay soft at 16px
    * (rounded-xl and up).
@@ -84,6 +89,26 @@
 }
 
 :root {
+  color-scheme: light;
+
+  /* DESIGN.md palette (light) */
+  --canvas: #ffffff;
+  --ink: #1a1a1a;
+  --slab: #1a1a1a;
+  --charcoal: #3d3d3d;
+  --graphite: #636363;
+  --cloud: #f7f7f7;
+  --fog: #e8e8e8;
+  --steel: #c2c2c2;
+  --brand: #024ad8;
+  --brand-bright: #296ef9;
+  --brand-deep: #0e3191;
+  --brand-soft: #c9e0fc;
+  --bloom-deep: #b3262b;
+  --bloom-wine: #5a1313;
+  --storm-deep: #356373;
+
+  /* shadcn semantic (light) */
   --background: #ffffff;
   --foreground: #1a1a1a;
   --card: #ffffff;
@@ -118,36 +143,56 @@
 }
 
 .dark {
-  --background: #1a1a1a;
-  --foreground: #ffffff;
-  --card: #292929;
-  --card-foreground: #ffffff;
-  --popover: #292929;
-  --popover-foreground: #ffffff;
-  --primary: #296ef9;
+  color-scheme: dark;
+
+  /* DESIGN.md palette (dark) — neutrals invert, brand fills stay deep */
+  --canvas: #1f1f1f;
+  --ink: #f2f2f2;
+  --slab: #0d0d0d;
+  --charcoal: #c7c7c7;
+  --graphite: #9b9b9b;
+  --cloud: #141414;
+  --fog: #333333;
+  --steel: #525252;
+  --brand: #024ad8;
+  --brand-bright: #6ea3ff;
+  --brand-deep: #0e3191;
+  --brand-soft: #12294d;
+  --bloom-deep: #ef5350;
+  --bloom-wine: #e8a3a3;
+  --storm-deep: #6da4b8;
+
+  /* shadcn semantic (dark) */
+  --background: #141414;
+  --foreground: #f2f2f2;
+  --card: #1f1f1f;
+  --card-foreground: #f2f2f2;
+  --popover: #1f1f1f;
+  --popover-foreground: #f2f2f2;
+  --primary: #024ad8;
   --primary-foreground: #ffffff;
-  --secondary: #292929;
-  --secondary-foreground: #ffffff;
-  --muted: #292929;
-  --muted-foreground: #c2c2c2;
-  --accent: #0e3191;
-  --accent-foreground: #ffffff;
-  --destructive: #b3262b;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
+  --secondary: #262626;
+  --secondary-foreground: #f2f2f2;
+  --muted: #262626;
+  --muted-foreground: #9b9b9b;
+  --accent: #12294d;
+  --accent-foreground: #9cc0ff;
+  --destructive: #ef5350;
+  --border: #333333;
+  --input: #525252;
   --ring: #296ef9;
   --chart-1: #296ef9;
-  --chart-2: #024ad8;
-  --chart-3: #c9e0fc;
-  --chart-4: #8ebdce;
-  --chart-5: #c2c2c2;
-  --sidebar: #292929;
-  --sidebar-foreground: #ffffff;
+  --chart-2: #6ea3ff;
+  --chart-3: #0e3191;
+  --chart-4: #6da4b8;
+  --chart-5: #9b9b9b;
+  --sidebar: #1f1f1f;
+  --sidebar-foreground: #f2f2f2;
   --sidebar-primary: #296ef9;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #292929;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #f2f2f2;
+  --sidebar-border: #333333;
   --sidebar-ring: #296ef9;
 }
 

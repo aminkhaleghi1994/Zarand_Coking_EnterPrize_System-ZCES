@@ -107,6 +107,9 @@
     "logout": "Sign out",
     "loggingOut": "Signing out…"
   },
+  "theme": {
+    "toggle": "Toggle dark mode"
+  },
   "errors": {
     "codes": {
       "VALIDATION_ERROR": "The submitted data is invalid.",

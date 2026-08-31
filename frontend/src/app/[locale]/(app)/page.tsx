@@ -33,7 +33,7 @@ export default async function LocalePage({
   return (
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-8 md:px-8 md:py-12">
       <section className="grid gap-2">
-        <span className="text-sm font-bold uppercase tracking-widest text-brand">
+        <span className="text-sm font-bold uppercase tracking-widest text-brand dark:text-brand-bright">
           {t("eyebrow")}
         </span>
         <h1 className="text-3xl font-bold leading-tight md:text-4xl">{t("welcome")}</h1>
@@ -84,7 +84,7 @@ export default async function LocalePage({
               key={key}
               className="flex flex-col gap-3 rounded-xl border border-fog bg-canvas p-6 shadow-soft-lift"
             >
-              <span className="flex size-11 items-center justify-center rounded-lg bg-brand-soft text-brand-deep">
+              <span className="flex size-11 items-center justify-center rounded-lg bg-brand-soft text-brand-deep dark:text-brand-bright">
                 <Icon aria-hidden className="size-6" />
               </span>
               <div className="grid gap-1">

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { LocaleSwitcher } from "@/components/common/LocaleSwitcher";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { SidebarNav } from "@/components/layout/SidebarNav";
 import { LogoutButton } from "@/features/auth/LogoutButton";
@@ -36,9 +37,10 @@ export function AppChrome({
         {t("a11y.skipToContent")}
       </a>
 
-      <div className="flex h-9 items-center justify-between gap-4 bg-ink px-4 text-sm text-white md:px-6">
+      <div className="flex h-9 items-center justify-between gap-4 bg-slab px-4 text-sm text-white md:px-6">
         <span className="hidden truncate text-white/70 md:inline">{t("app.fullName")}</span>
         <div className="flex items-center gap-1">
+          <ThemeToggle tone="dark" />
           <LocaleSwitcher tone="dark" />
           {identity ? (
             <span className="flex items-center gap-2">
@@ -79,7 +81,7 @@ export function AppChrome({
             {children}
           </main>
 
-          <footer className="border-t border-fog bg-ink text-white">
+          <footer className="border-t border-fog bg-slab text-white">
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-white/60 md:px-8">
               <p>{t("footer.legal", { year: new Date().getFullYear() })}</p>
               <p>{t("app.tagline")}</p>

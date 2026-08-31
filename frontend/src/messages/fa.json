@@ -107,6 +107,9 @@
     "logout": "خروج",
     "loggingOut": "در حال خروج…"
   },
+  "theme": {
+    "toggle": "تغییر حالت تاریک"
+  },
   "errors": {
     "codes": {
       "VALIDATION_ERROR": "داده‌های ارسالی نامعتبر است.",

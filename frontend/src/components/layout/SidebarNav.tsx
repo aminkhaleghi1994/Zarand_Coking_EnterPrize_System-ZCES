@@ -33,7 +33,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                   className={cn(
                     "flex h-11 items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring/50",
                     active
-                      ? "bg-brand-soft font-bold text-brand-deep"
+                      ? "bg-brand-soft font-bold text-brand-deep dark:text-brand-bright"
                       : "text-charcoal hover:bg-cloud hover:text-ink",
                   )}
                 >

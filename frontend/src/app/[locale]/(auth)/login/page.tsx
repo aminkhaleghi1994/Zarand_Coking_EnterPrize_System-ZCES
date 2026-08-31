@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { LocaleSwitcher } from "@/components/common/LocaleSwitcher";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { getSession } from "@/lib/session";
 
@@ -28,13 +29,16 @@ export default async function LoginPage({
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
-      <div className="relative hidden flex-col justify-between gap-16 overflow-hidden bg-ink p-10 text-white xl:flex 2xl:p-16">
+      <div className="relative hidden flex-col justify-between gap-16 overflow-hidden bg-slab p-10 text-white xl:flex 2xl:p-16">
         <div className="flex items-center justify-between">
           <span aria-hidden className="flex gap-2">
             <span className="h-10 w-3 -skew-x-12 bg-brand rtl:skew-x-12" />
             <span className="h-10 w-3 -skew-x-12 bg-brand rtl:skew-x-12" />
           </span>
-          <LocaleSwitcher tone="dark" />
+          <div className="flex items-center gap-1">
+            <ThemeToggle tone="dark" />
+            <LocaleSwitcher tone="dark" />
+          </div>
         </div>
 
         <div className="grid max-w-lg gap-4">
@@ -61,7 +65,10 @@ export default async function LoginPage({
               <span className="h-8 w-2.5 -skew-x-12 bg-brand rtl:skew-x-12" />
               <span className="h-8 w-2.5 -skew-x-12 bg-brand rtl:skew-x-12" />
             </span>
-            <LocaleSwitcher />
+            <div className="flex items-center gap-1">
+              <ThemeToggle tone="light" />
+              <LocaleSwitcher tone="light" />
+            </div>
           </div>
 
           <div className="mb-8 grid gap-2">
