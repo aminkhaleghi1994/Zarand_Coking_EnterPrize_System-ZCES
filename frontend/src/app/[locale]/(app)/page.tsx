@@ -1,7 +1,24 @@
+import {
+  Banknote,
+  ChartColumnBig,
+  MonitorSmartphone,
+  Settings,
+  Users,
+  Warehouse,
+} from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { HealthStatusCard } from "@/components/common/HealthStatusCard";
-import { Link } from "@/i18n/navigation";
+import { getSession } from "@/lib/session";
+
+const MODULES = [
+  { key: "employees", icon: Users, phase: 3 },
+  { key: "warehouse", icon: Warehouse, phase: 4 },
+  { key: "assets", icon: MonitorSmartphone, phase: 6 },
+  { key: "loans", icon: Banknote, phase: 7 },
+  { key: "reports", icon: ChartColumnBig, phase: 9 },
+  { key: "settings", icon: Settings, phase: 9 },
+] as const;
 
 export default async function LocalePage({
   params,
@@ -10,35 +27,76 @@ export default async function LocalePage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("home");
+  const t = await getTranslations("dashboard");
+  const session = await getSession();
 
   return (
-    <div>
-      <section className="bg-canvas">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 md:grid-cols-[1.2fr_1fr] md:px-8 md:py-24">
-          <div className="flex flex-col items-start gap-6">
-            <span className="text-sm font-bold uppercase tracking-widest text-brand">
-              {t("eyebrow")}
-            </span>
-            <h1 className="text-4xl font-bold leading-tight md:text-5xl">{t("title")}</h1>
-            <p className="max-w-xl text-lg text-charcoal">{t("description")}</p>
-            <Link
-              href="/login"
-              className="inline-flex h-11 items-center rounded-md bg-brand px-6 text-sm font-bold uppercase tracking-wide text-white shadow-soft-lift transition-colors duration-200 hover:bg-brand-deep"
-            >
-              {t("cta")}
-            </Link>
-          </div>
-          <div className="flex items-start justify-start md:justify-end">
-            <HealthStatusCard />
-          </div>
-        </div>
+    <div className="mx-auto grid max-w-7xl gap-10 px-4 py-8 md:px-8 md:py-12">
+      <section className="grid gap-2">
+        <span className="text-sm font-bold uppercase tracking-widest text-brand">
+          {t("eyebrow")}
+        </span>
+        <h1 className="text-3xl font-bold leading-tight md:text-4xl">{t("welcome")}</h1>
+        {session.ok && (
+          <>
+            <p className="text-charcoal">
+              {t("identityHint", { email: session.session.user.email })}
+            </p>
+            {session.session.roles.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-graphite">
+                  {t("rolesLabel")}
+                </span>
+                {session.session.roles.map((role) => (
+                  <span
+                    key={role}
+                    className="rounded-lg border border-fog bg-canvas px-2 py-1 text-xs font-bold text-charcoal"
+                  >
+                    {role}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
-      <section className="border-t border-fog bg-cloud">
-        <div className="mx-auto max-w-7xl px-4 py-12 md:px-8">
-          <p className="text-sm text-graphite">{t("healthDescription")}</p>
+      <section aria-labelledby="status-heading" className="grid gap-4">
+        <div className="grid gap-1">
+          <h2 id="status-heading" className="text-xl font-bold">
+            {t("statusTitle")}
+          </h2>
+          <p className="text-sm text-graphite">{t("statusDescription")}</p>
         </div>
+        <HealthStatusCard />
+      </section>
+
+      <section aria-labelledby="modules-heading" className="grid gap-4">
+        <div className="grid gap-1">
+          <h2 id="modules-heading" className="text-xl font-bold">
+            {t("modulesTitle")}
+          </h2>
+          <p className="text-sm text-graphite">{t("modulesDescription")}</p>
+        </div>
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {MODULES.map(({ key, icon: Icon, phase }) => (
+            <li
+              key={key}
+              className="flex flex-col gap-3 rounded-xl border border-fog bg-canvas p-6 shadow-soft-lift"
+            >
+              <span className="flex size-11 items-center justify-center rounded-lg bg-brand-soft text-brand-deep">
+                <Icon aria-hidden className="size-6" />
+              </span>
+              <div className="grid gap-1">
+                <h3 className="font-bold">{t(`modules.${key}.title`)}</h3>
+                <p className="text-sm text-charcoal">{t(`modules.${key}.description`)}</p>
+              </div>
+              <span className="mt-auto w-fit rounded-lg border border-fog px-2 py-1 text-xs font-bold text-graphite">
+                {t("phaseBadge", { phase })}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );
