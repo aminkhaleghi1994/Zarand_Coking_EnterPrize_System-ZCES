@@ -90,9 +90,9 @@ detail fetch of the other's request is denied without leak.
 
 ## Phase 8: Polish & Convergence
 
-- [ ] T017 [P] [POL] `scripts/smoke-test.ps1`: item-request E2E section — compose 2-line request → invalid variants 422 → approve → fulfill → Stock tab quantities decremented → overdraw request refused `INSUFFICIENT_STOCK` → audit trail contains all four transition actions (SC-001..SC-004)
-- [ ] T018 [POL] CHANGELOG 0.5.0 entry + VERSION bump + README requests module section (flow map, permissions, roles)
-- [ ] T019 [POL] Full gate: backend ruff/mypy/pytest (incl. PG + concurrency), frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
+- [x] T017 [P] [POL] `scripts/smoke-test.ps1`: item-request E2E section — compose 2-line request → invalid variants 422 → approve → fulfill → Stock tab quantities decremented → overdraw request refused `INSUFFICIENT_STOCK` → audit trail contains all four transition actions (SC-001..SC-004)
+- [x] T018 [POL] CHANGELOG 0.5.0 entry + VERSION bump + README requests module section (flow map, permissions, roles)
+- [x] T019 [POL] Full gate: backend ruff/mypy/pytest (incl. PG + concurrency), frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
 
 ---
 

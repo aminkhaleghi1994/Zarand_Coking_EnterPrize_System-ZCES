@@ -390,6 +390,75 @@ Check "warehouse: receive/issue/overdraw ledger + low-stock alert" {
     Assert-True ($mine.Count -eq 1) "expected exactly 1 active alert for the placement, got $($mine.Count)"
 }
 
+# --- Item request flow (Phase 5, T017) ---
+
+Check "requests: compose + invalid variants + approve + fulfill + overdraw" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+
+    $itemA = Invoke-BffJson "POST" "/api/warehouse/items" @{ name = "Smoke req A $unique"; name_fa = "Smoke req A FA"; unit = "ad"; min_quantity = "0" } $headers
+    Assert-True ($itemA.Status -eq 201) "item A create failed"
+    $itemB = Invoke-BffJson "POST" "/api/warehouse/items" @{ name = "Smoke req B $unique"; name_fa = "Smoke req B FA"; unit = "ad"; min_quantity = "0" } $headers
+    Assert-True ($itemB.Status -eq 201) "item B create failed"
+    $itemAId = ($itemA.Body | ConvertFrom-Json).id
+    $itemBId = ($itemB.Body | ConvertFrom-Json).id
+
+    $workplaces = Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    $cp1 = ($workplaces.Body | ConvertFrom-Json).items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1
+    $warehouse = Invoke-BffJson "POST" "/api/warehouse/warehouses" @{ workplace_id = $cp1.id; code = "WH-REQ-$unique"; name = "Req WH"; name_fa = "Req WH FA" } $headers
+    $warehouseId = ($warehouse.Body | ConvertFrom-Json).id
+    $shelf = Invoke-BffJson "POST" "/api/warehouse/warehouses/$warehouseId/shelves" @{ code = "R-01" } $headers
+    $shelfId = ($shelf.Body | ConvertFrom-Json).id
+    $recvA = Invoke-BffJson "POST" "/api/warehouse/placements/receive" @{ item_id = $itemAId; shelf_id = $shelfId; quantity = "10" } $headers
+    $placementA = ($recvA.Body | ConvertFrom-Json).id
+    $recvB = Invoke-BffJson "POST" "/api/warehouse/placements/receive" @{ item_id = $itemBId; shelf_id = $shelfId; quantity = "2" } $headers
+    $placementB = ($recvB.Body | ConvertFrom-Json).id
+
+    $invalid = Invoke-BffJson "POST" "/api/warehouse/requests" @{ purpose_description = "x"; lines = @() } $headers
+    Assert-True ($invalid.Status -eq 422) "expected 422 for empty lines, got $($invalid.Status)"
+
+    $created = Invoke-BffJson "POST" "/api/warehouse/requests" @{
+        purpose_description = "Smoke request $unique";
+        lines = @(
+            @{ item_id = $itemAId; quantity = "4" },
+            @{ item_id = $itemBId; quantity = "2" }
+        )
+    } $headers
+    Assert-True ($created.Status -eq 201) "request create failed: $($created.Status) $($created.Body)"
+    $request = $created.Body | ConvertFrom-Json
+    Assert-True ($request.status -eq "pending") "expected pending"
+    $lineA = $request.lines | Where-Object { $_.item.id -eq $itemAId } | Select-Object -First 1
+    $lineB = $request.lines | Where-Object { $_.item.id -eq $itemBId } | Select-Object -First 1
+
+    $approve = Invoke-BffJson "POST" "/api/warehouse/requests/$($request.id)/approve" @{ version = $request.version; note = "smoke" } $headers
+    Assert-True ($approve.Status -eq 200) "approve failed: $($approve.Status) $($approve.Body)"
+
+    $fulfill = Invoke-BffJson "POST" "/api/warehouse/requests/$($request.id)/fulfill" @{
+        version = ($approve.Body | ConvertFrom-Json).version;
+        lines = @(
+            @{ line_id = $lineA.id; placement_id = $placementA },
+            @{ line_id = $lineB.id; placement_id = $placementB }
+        )
+    } $headers
+    Assert-True ($fulfill.Status -eq 200) "fulfill failed: $($fulfill.Status) $($fulfill.Body)"
+
+    $placements = Invoke-BffJson "GET" "/api/warehouse/placements?item_id=$itemAId&include_empty=true" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    $placementAAfter = (($placements.Body | ConvertFrom-Json).items | Where-Object { $_.id -eq $placementA })
+    Assert-True ($placementAAfter.quantity -eq "6.000") "expected A 6.000, got $($placementAAfter.quantity)"
+
+    $overdraw = Invoke-BffJson "POST" "/api/warehouse/requests" @{ purpose_description = "overdraw $unique"; lines = @( @{ item_id = $itemAId; quantity = "99" } ) } $headers
+    $overdrawReq = $overdraw.Body | ConvertFrom-Json
+    $approve2 = Invoke-BffJson "POST" "/api/warehouse/requests/$($overdrawReq.id)/approve" @{ version = $overdrawReq.version } $headers
+    $overdrawVersion = ($approve2.Body | ConvertFrom-Json).version
+    $overdrawLineId = ($overdrawReq.lines | Select-Object -First 1).id
+    $refused = Invoke-BffJson "POST" "/api/warehouse/requests/$($overdrawReq.id)/fulfill" @{ version = $overdrawVersion; lines = @( @{ line_id = $overdrawLineId; placement_id = $placementA } ) } $headers
+    Assert-True ($refused.Status -eq 409) "expected overdraw 409, got $($refused.Status)"
+    Assert-True (($refused.Body | ConvertFrom-Json).code -eq "INSUFFICIENT_STOCK") "expected INSUFFICIENT_STOCK"
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red
