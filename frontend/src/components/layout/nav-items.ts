@@ -1,6 +1,7 @@
 import {
   Banknote,
   ChartColumnBig,
+  ClipboardList,
   LayoutDashboard,
   MonitorSmartphone,
   Settings,
@@ -29,6 +30,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "dashboard", icon: LayoutDashboard, href: "/" },
       { key: "employees", icon: Users, href: "/employees" },
       { key: "warehouse", icon: Warehouse, href: "/warehouse" },
+      { key: "requests", icon: ClipboardList, href: "/requests" },
       { key: "assets", icon: MonitorSmartphone, phase: 6 },
       { key: "loans", icon: Banknote, phase: 7 },
     ],
