@@ -147,6 +147,7 @@
     "eyebrow": "Administration",
     "title": "Access Control",
     "description": "Manage roles, review the permission catalog and assign user access.",
+    "tabsLabel": "Administration sections",
     "tabs": {
       "roles": "Roles",
       "permissions": "Permissions",
