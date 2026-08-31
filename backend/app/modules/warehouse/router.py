@@ -10,10 +10,15 @@ from app.modules.user.dependencies import require_operation
 from app.modules.user.schemas import PageParams
 from app.modules.warehouse import repository, service
 from app.modules.warehouse.schemas import (
+    AdjustIn,
+    IssueIn,
     ItemCreateIn,
     ItemOut,
     ItemRetireIn,
     ItemUpdateIn,
+    MovementOut,
+    PlacementOut,
+    ReceiveIn,
     ShelfCreateIn,
     ShelfOut,
     ShelfRetireIn,
@@ -36,6 +41,10 @@ require_shelf_read = require_operation("warehouse:shelf:read")
 require_shelf_create = require_operation("warehouse:shelf:create")
 require_shelf_update = require_operation("warehouse:shelf:update")
 require_shelf_retire = require_operation("warehouse:shelf:retire")
+require_stock_read = require_operation("warehouse:stock:read")
+require_stock_receive = require_operation("warehouse:stock:receive")
+require_stock_issue = require_operation("warehouse:stock:issue")
+require_stock_adjust = require_operation("warehouse:stock:adjust")
 
 router = APIRouter(tags=["warehouse"])
 
@@ -185,3 +194,67 @@ def post_shelf_retire(
 ) -> ShelfOut:
     shelf = service.retire_shelf(session, context, shelf_id, payload)
     return repository.to_shelf_out(shelf)
+
+
+# --- Placements & stock (US3) ---
+
+
+@router.get("/warehouse/placements", response_model=Page[PlacementOut])
+def get_placements(
+    params: PageParams = Depends(),
+    warehouse_id: uuid.UUID | None = None,
+    item_id: uuid.UUID | None = None,
+    search: str | None = None,
+    include_empty: bool = False,
+    context: ScopeContext = Depends(require_stock_read),
+    session: Session = Depends(get_db),
+) -> Page[PlacementOut]:
+    return repository.list_placements(
+        session,
+        context,
+        params,
+        warehouse_id=warehouse_id,
+        item_id=item_id,
+        search=search,
+        include_empty=include_empty,
+    )
+
+
+@router.post("/warehouse/placements/receive", response_model=PlacementOut)
+def post_receive(
+    payload: ReceiveIn,
+    context: ScopeContext = Depends(require_stock_receive),
+    session: Session = Depends(get_db),
+) -> PlacementOut:
+    placement, item, shelf, warehouse = service.receive_stock(session, context, payload)
+    return repository.to_placement_out(placement, item, shelf, warehouse)
+
+
+@router.post("/warehouse/placements/issue", response_model=PlacementOut)
+def post_issue(
+    payload: IssueIn,
+    context: ScopeContext = Depends(require_stock_issue),
+    session: Session = Depends(get_db),
+) -> PlacementOut:
+    placement, item, shelf, warehouse = service.issue_stock(session, context, payload)
+    return repository.to_placement_out(placement, item, shelf, warehouse)
+
+
+@router.post("/warehouse/placements/adjust", response_model=PlacementOut)
+def post_adjust(
+    payload: AdjustIn,
+    context: ScopeContext = Depends(require_stock_adjust),
+    session: Session = Depends(get_db),
+) -> PlacementOut:
+    placement, item, shelf, warehouse = service.adjust_stock(session, context, payload)
+    return repository.to_placement_out(placement, item, shelf, warehouse)
+
+
+@router.get("/warehouse/placements/{placement_id}/movements", response_model=Page[MovementOut])
+def get_movements(
+    placement_id: uuid.UUID,
+    params: PageParams = Depends(),
+    context: ScopeContext = Depends(require_stock_read),
+    session: Session = Depends(get_db),
+) -> Page[MovementOut]:
+    return repository.list_movements(session, context, params, placement_id=placement_id)

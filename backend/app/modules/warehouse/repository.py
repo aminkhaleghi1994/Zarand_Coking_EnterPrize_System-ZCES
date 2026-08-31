@@ -3,6 +3,7 @@ and applies the mandatory scope filter (constitution II) — a query without one
 is a bug. Exception per spec FR-019/research R5: catalog reads are
 company-wide reference data gated by permission alone."""
 
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import ColumnElement, func, or_, select
@@ -18,10 +19,13 @@ from app.modules.warehouse.models import (
     InventoryPlacement,
     ItemCatalog,
     Shelf,
+    StockMovement,
     Warehouse,
 )
 from app.modules.warehouse.schemas import (
     ItemOut,
+    MovementOut,
+    PlacementOut,
     ShelfOut,
     WarehouseOut,
     format_quantity,
@@ -282,3 +286,198 @@ def list_blocking_placements(
     if shelf_id is not None:
         base = base.where(InventoryPlacement.shelf_id == shelf_id)
     return list(session.scalars(base.order_by(InventoryPlacement.id)).all())
+
+
+# --- Placements & stock movements (US3) ---
+
+
+def _placement_base(session: Session, context: ScopeContext, operation: str):  # type: ignore[no-untyped-def]
+    return (
+        select(InventoryPlacement, ItemCatalog, Shelf, Warehouse)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .join(ItemCatalog, InventoryPlacement.item_id == ItemCatalog.id)
+        .where(_warehouse_scope_filter(context, operation))
+    )
+
+
+def list_placements(
+    session: Session,
+    context: ScopeContext,
+    params: PageParams,
+    *,
+    warehouse_id: UUID | None = None,
+    item_id: UUID | None = None,
+    search: str | None = None,
+    include_empty: bool = False,
+) -> Page[PlacementOut]:
+    base = _placement_base(session, context, "warehouse:stock:read")
+    if not include_empty:
+        base = base.where(InventoryPlacement.quantity > 0)
+    if warehouse_id is not None:
+        base = base.where(Shelf.warehouse_id == warehouse_id)
+    if item_id is not None:
+        base = base.where(InventoryPlacement.item_id == item_id)
+    if search:
+        pattern = f"%{search.strip()}%"
+        base = base.where(
+            or_(
+                ItemCatalog.name_norm.ilike(pattern),
+                ItemCatalog.name_fa.ilike(pattern),
+                ItemCatalog.code_norm.ilike(pattern),
+            )
+        )
+    total = session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    rows = session.execute(
+        base.order_by(ItemCatalog.name_norm, Shelf.code)
+        .offset((params.page - 1) * params.page_size)
+        .limit(params.page_size)
+    ).all()
+    items = [to_placement_out(*row) for row in rows]
+    return Page[PlacementOut](
+        items=items, total=total, page=params.page, page_size=params.page_size
+    )
+
+
+def to_placement_out(
+    placement: InventoryPlacement,
+    item: ItemCatalog,
+    shelf: Shelf,
+    warehouse: Warehouse,
+) -> PlacementOut:
+    from app.modules.warehouse.schemas import (
+        ItemBriefOut,
+        ShelfBriefOut,
+        WarehouseBriefOut,
+    )
+
+    return PlacementOut(
+        id=placement.id,
+        item=ItemBriefOut(
+            id=item.id,
+            name=item.name,
+            name_fa=item.name_fa,
+            code=item.code,
+            unit=item.unit,
+            min_quantity=format_quantity(item.min_quantity),
+        ),
+        shelf=ShelfBriefOut(id=shelf.id, code=shelf.code, name=shelf.name),
+        warehouse=WarehouseBriefOut(id=warehouse.id, code=warehouse.code, name=warehouse.name),
+        quantity=format_quantity(placement.quantity),
+        below_min_threshold=placement.quantity < item.min_quantity,
+    )
+
+
+def to_movement_out(movement: StockMovement) -> MovementOut:
+    return MovementOut(
+        id=movement.id,
+        movement_type=str(movement.movement_type.value),
+        quantity_delta=format_quantity(movement.quantity_delta),
+        resulting_quantity=format_quantity(movement.resulting_quantity),
+        reason=movement.reason,
+        actor_user_id=movement.created_by,
+        created_at=movement.created_at,
+    )
+
+
+def get_placement(session: Session, placement_id: UUID) -> InventoryPlacement | None:
+    return session.scalar(select(InventoryPlacement).where(InventoryPlacement.id == placement_id))
+
+
+def get_placement_bundle(
+    session: Session, placement_id: UUID
+) -> tuple[InventoryPlacement, ItemCatalog, Shelf, Warehouse] | None:
+    row = session.execute(
+        select(InventoryPlacement, ItemCatalog, Shelf, Warehouse)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .join(ItemCatalog, InventoryPlacement.item_id == ItemCatalog.id)
+        .where(InventoryPlacement.id == placement_id)
+    ).first()
+    return row
+
+
+def lock_placement(session: Session, placement_id: UUID) -> InventoryPlacement | None:
+    """SELECT ... FOR UPDATE — the decrement serialization point (constitution III).
+
+    `populate_existing` forces a fresh read of the locked row so the quantity
+    reflects the committed state, not an earlier snapshot in this transaction.
+    """
+    return session.scalar(
+        select(InventoryPlacement)
+        .where(InventoryPlacement.id == placement_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
+def lock_placement_for_stock(
+    session: Session, shelf_id: UUID, item_id: UUID
+) -> InventoryPlacement | None:
+    return session.scalar(
+        select(InventoryPlacement)
+        .where(
+            InventoryPlacement.shelf_id == shelf_id,
+            InventoryPlacement.item_id == item_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
+def record_movement(
+    session: Session,
+    *,
+    placement_id: UUID,
+    item_id: UUID,
+    movement_type: str,
+    quantity_delta: Decimal,
+    resulting_quantity: Decimal,
+    reason: str | None,
+    actor_user_id: UUID,
+) -> StockMovement:
+    from app.modules.warehouse.models import MovementType
+
+    movement = StockMovement(
+        placement_id=placement_id,
+        item_id=item_id,
+        movement_type=MovementType(movement_type),
+        quantity_delta=quantity_delta,
+        resulting_quantity=resulting_quantity,
+        reason=reason,
+        created_by=actor_user_id,
+    )
+    session.add(movement)
+    session.flush()
+    return movement
+
+
+def list_movements(
+    session: Session,
+    context: ScopeContext,
+    params: PageParams,
+    *,
+    placement_id: UUID,
+) -> Page[MovementOut]:
+    base = (
+        select(StockMovement)
+        .join(InventoryPlacement, StockMovement.placement_id == InventoryPlacement.id)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .where(
+            _warehouse_scope_filter(context, "warehouse:stock:read"),
+            StockMovement.placement_id == placement_id,
+        )
+    )
+    total = session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    rows = session.scalars(
+        base.order_by(StockMovement.created_at.desc(), StockMovement.id.desc())
+        .offset((params.page - 1) * params.page_size)
+        .limit(params.page_size)
+    ).all()
+    return Page[MovementOut](
+        items=[to_movement_out(movement) for movement in rows],
+        total=total,
+        page=params.page,
+        page_size=params.page_size,
+    )

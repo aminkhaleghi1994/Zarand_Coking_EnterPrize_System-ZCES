@@ -18,6 +18,7 @@ from app.common.scope import ScopeContext, ScopeTarget, can
 from app.core.errors import (
     AUTHORIZATION_DENIED,
     BUSINESS_RULE_VIOLATION,
+    INSUFFICIENT_STOCK,
     STALE_VERSION,
     AppError,
     duplicate_resource,
@@ -27,11 +28,14 @@ from app.core.errors import (
 from app.modules.audit.contracts import write_audit
 from app.modules.user import contracts as user_contracts
 from app.modules.warehouse import repository
-from app.modules.warehouse.models import ItemCatalog, Shelf, Warehouse
+from app.modules.warehouse.models import InventoryPlacement, ItemCatalog, Shelf, Warehouse
 from app.modules.warehouse.schemas import (
+    AdjustIn,
+    IssueIn,
     ItemCreateIn,
     ItemRetireIn,
     ItemUpdateIn,
+    ReceiveIn,
     ShelfCreateIn,
     ShelfRetireIn,
     ShelfUpdateIn,
@@ -51,6 +55,10 @@ _WAREHOUSE_RETIRE = "warehouse:warehouse:retire"
 _SHELF_CREATE = "warehouse:shelf:create"
 _SHELF_UPDATE = "warehouse:shelf:update"
 _SHELF_RETIRE = "warehouse:shelf:retire"
+_STOCK_RECEIVE = "warehouse:stock:receive"
+_STOCK_ISSUE = "warehouse:stock:issue"
+_STOCK_ADJUST = "warehouse:stock:adjust"
+_STOCK_READ = "warehouse:stock:read"
 
 
 def _require_catalog_scope_any(context: ScopeContext, operation: str) -> None:
@@ -560,10 +568,222 @@ def retire_shelf(
     return shelf
 
 
+# --- stock_service (US3): placements & movement ledger ---
+
+
+def _require_stock_target(context: ScopeContext, operation: str, warehouse: Warehouse) -> None:
+    if not can(
+        context,
+        operation,
+        ScopeTarget(complex_id=str(warehouse.complex_id), workplace_id=str(warehouse.workplace_id)),
+    ):
+        raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+
+
+def _load_stock_bundle(
+    session: Session, context: ScopeContext, placement_id: uuid.UUID, operation: str
+) -> tuple[InventoryPlacement, ItemCatalog, Shelf, Warehouse]:
+    bundle = repository.get_placement_bundle(session, placement_id)
+    if bundle is None:
+        raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+    placement, item, shelf, warehouse = bundle
+    if shelf.deleted_at is not None or item.deleted_at is not None:
+        raise not_found("Placement not found")
+    _require_stock_target(context, operation, warehouse)
+    return placement, item, shelf, warehouse
+
+
+def _placement_movement_snapshot(
+    placement: InventoryPlacement, before_quantity: Decimal, after_quantity: Decimal
+) -> dict[str, object]:
+    return {
+        "placement_id": str(placement.id),
+        "item_id": str(placement.item_id),
+        "quantity_before": format_quantity(before_quantity),
+        "quantity_after": format_quantity(after_quantity),
+    }
+
+
+def _evaluate_alert(session: Session, placement: InventoryPlacement, item: ItemCatalog) -> None:
+    """US4 wires alert evaluation here (T026); kept as a hook point."""
+
+
+def receive_stock(
+    session: Session, context: ScopeContext, payload: ReceiveIn
+) -> tuple[InventoryPlacement, ItemCatalog, Shelf, Warehouse]:
+    item = repository.get_item(session, payload.item_id)
+    if item is None or item.deleted_at is not None:
+        raise not_found("Item not found")
+    shelf = repository.get_shelf(session, payload.shelf_id)
+    if shelf is None or shelf.deleted_at is not None:
+        raise not_found("Shelf not found")
+    warehouse = repository.get_warehouse(session, shelf.warehouse_id)
+    if warehouse is None:
+        raise not_found("Warehouse not found")
+    _require_stock_target(context, _STOCK_RECEIVE, warehouse)
+
+    quantity = quantize_quantity(payload.quantity)
+    placement = repository.lock_placement_for_stock(session, shelf.id, item.id)
+    if placement is None:
+        try:
+            with session.begin_nested():
+                placement = InventoryPlacement(
+                    shelf_id=shelf.id,
+                    item_id=item.id,
+                    quantity=Decimal("0"),
+                    created_by=uuid.UUID(context.user_id),
+                    updated_by=uuid.UUID(context.user_id),
+                )
+                session.add(placement)
+                session.flush()
+        except IntegrityError:
+            placement = repository.lock_placement_for_stock(session, shelf.id, item.id)
+            if placement is None:
+                raise
+
+    resulting = quantize_quantity(placement.quantity + quantity)
+    placement.quantity = resulting
+    placement.updated_by = uuid.UUID(context.user_id)
+    session.add(placement)
+    movement = repository.record_movement(
+        session,
+        placement_id=placement.id,
+        item_id=item.id,
+        movement_type="receive",
+        quantity_delta=quantity,
+        resulting_quantity=resulting,
+        reason=payload.reason,
+        actor_user_id=uuid.UUID(context.user_id),
+    )
+    _evaluate_alert(session, placement, item)
+    write_audit(
+        session,
+        action="STOCK_RECEIVED",
+        entity_type="stock_movement",
+        entity_id=movement.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        before=_placement_movement_snapshot(placement, resulting - quantity, resulting - quantity),
+        after={
+            **_placement_movement_snapshot(placement, resulting - quantity, resulting),
+            "movement_id": str(movement.id),
+            "movement_type": "receive",
+            "quantity": format_quantity(quantity),
+            "reason": payload.reason,
+        },
+        critical=True,
+    )
+    session.commit()
+    return placement, item, shelf, warehouse
+
+
+def issue_stock(
+    session: Session, context: ScopeContext, payload: IssueIn
+) -> tuple[InventoryPlacement, ItemCatalog, Shelf, Warehouse]:
+    placement, item, shelf, warehouse = _load_stock_bundle(
+        session, context, payload.placement_id, _STOCK_ISSUE
+    )
+    placement = repository.lock_placement(session, placement.id)
+    assert placement is not None
+    quantity = quantize_quantity(payload.quantity)
+    current = quantize_quantity(placement.quantity)
+    if quantity > current:
+        raise AppError(
+            INSUFFICIENT_STOCK,
+            "Not enough stock on this placement",
+            status_code=409,
+            details={"available": format_quantity(current), "requested": format_quantity(quantity)},
+        )
+
+    resulting = quantize_quantity(current - quantity)
+    placement.quantity = resulting
+    placement.updated_by = uuid.UUID(context.user_id)
+    session.add(placement)
+    movement = repository.record_movement(
+        session,
+        placement_id=placement.id,
+        item_id=item.id,
+        movement_type="issue",
+        quantity_delta=-quantity,
+        resulting_quantity=resulting,
+        reason=payload.reason,
+        actor_user_id=uuid.UUID(context.user_id),
+    )
+    _evaluate_alert(session, placement, item)
+    write_audit(
+        session,
+        action="STOCK_ISSUED",
+        entity_type="stock_movement",
+        entity_id=movement.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        before=_placement_movement_snapshot(placement, current, current),
+        after={
+            **_placement_movement_snapshot(placement, current, resulting),
+            "movement_id": str(movement.id),
+            "movement_type": "issue",
+            "quantity": format_quantity(quantity),
+            "reason": payload.reason,
+        },
+        critical=True,
+    )
+    session.commit()
+    return placement, item, shelf, warehouse
+
+
+def adjust_stock(
+    session: Session, context: ScopeContext, payload: AdjustIn
+) -> tuple[InventoryPlacement, ItemCatalog, Shelf, Warehouse]:
+    placement, item, shelf, warehouse = _load_stock_bundle(
+        session, context, payload.placement_id, _STOCK_ADJUST
+    )
+    placement = repository.lock_placement(session, placement.id)
+    assert placement is not None
+    target = quantize_quantity(payload.quantity)
+    current = quantize_quantity(placement.quantity)
+    delta = quantize_quantity(target - current)
+    if delta == 0:
+        raise validation_error("Adjusted quantity equals the current stock")
+
+    placement.quantity = target
+    placement.updated_by = uuid.UUID(context.user_id)
+    session.add(placement)
+    movement = repository.record_movement(
+        session,
+        placement_id=placement.id,
+        item_id=item.id,
+        movement_type="adjust",
+        quantity_delta=delta,
+        resulting_quantity=target,
+        reason=payload.reason,
+        actor_user_id=uuid.UUID(context.user_id),
+    )
+    _evaluate_alert(session, placement, item)
+    write_audit(
+        session,
+        action="STOCK_ADJUSTED",
+        entity_type="stock_movement",
+        entity_id=movement.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        before=_placement_movement_snapshot(placement, current, current),
+        after={
+            **_placement_movement_snapshot(placement, current, target),
+            "movement_id": str(movement.id),
+            "movement_type": "adjust",
+            "quantity": format_quantity(delta),
+            "reason": payload.reason,
+        },
+        critical=True,
+    )
+    session.commit()
+    return placement, item, shelf, warehouse
+
+
 __all__ = [
+    "adjust_stock",
     "create_item",
     "create_shelf",
     "create_warehouse",
+    "issue_stock",
+    "receive_stock",
     "retire_item",
     "retire_shelf",
     "retire_warehouse",
