@@ -43,8 +43,8 @@ export default async function LocaleLayout({
   const direction = locale === "fa" ? "rtl" : "ltr";
 
   return (
-    <html lang={locale} dir={direction} className={font.variable}>
-      <body className="antialiased">
+    <html lang={locale} dir={direction} className={font.variable} suppressHydrationWarning>
+      <body className="antialiased" suppressHydrationWarning>
         <NextIntlClientProvider>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
