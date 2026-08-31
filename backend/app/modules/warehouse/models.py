@@ -35,7 +35,7 @@ from app.common.mixins import (
 from app.core.database import Base
 
 
-class MovementType(str, enum.Enum):
+class MovementType(enum.StrEnum):
     RECEIVE = "receive"
     ISSUE = "issue"
     ADJUST = "adjust"
@@ -139,9 +139,7 @@ class InventoryPlacement(IDMixin, TimestampMixin, CreatedByMixin, UpdatedByMixin
         ForeignKey("item_catalog.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    quantity: Mapped[Decimal] = mapped_column(
-        Numeric(14, 3), nullable=False, default=Decimal("0")
-    )
+    quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False, default=Decimal("0"))
 
     __table_args__ = (
         CheckConstraint(

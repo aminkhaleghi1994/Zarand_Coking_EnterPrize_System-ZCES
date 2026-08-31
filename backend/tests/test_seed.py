@@ -123,7 +123,7 @@ def test_seed_is_idempotent(pg_session):  # type: ignore[no-untyped-def]
 def test_seed_creates_warehouse_permissions(pg_session):  # type: ignore[no-untyped-def]
     run_seed(pg_session, prod=False)
     codes = set(pg_session.scalars(select(Permission.code)).all())
-    assert WAREHOUSE_PERMISSION_CODES <= codes
+    assert codes >= WAREHOUSE_PERMISSION_CODES
 
 
 @requires_database

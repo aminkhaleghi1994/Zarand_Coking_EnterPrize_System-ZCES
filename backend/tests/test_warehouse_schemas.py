@@ -50,13 +50,17 @@ def test_item_create_in_negative_min_quantity_rejected() -> None:
 
 def test_receive_in_quantity_must_be_positive() -> None:
     with pytest.raises(ValidationError):
-        ReceiveIn(item_id="00000000-0000-0000-0000-000000000001",
-                  shelf_id="00000000-0000-0000-0000-000000000002",
-                  quantity=Decimal("0"))
+        ReceiveIn(
+            item_id="00000000-0000-0000-0000-000000000001",
+            shelf_id="00000000-0000-0000-0000-000000000002",
+            quantity=Decimal("0"),
+        )
     with pytest.raises(ValidationError):
-        ReceiveIn(item_id="00000000-0000-0000-0000-000000000001",
-                  shelf_id="00000000-0000-0000-0000-000000000002",
-                  quantity=Decimal("-5"))
+        ReceiveIn(
+            item_id="00000000-0000-0000-0000-000000000001",
+            shelf_id="00000000-0000-0000-0000-000000000002",
+            quantity=Decimal("-5"),
+        )
 
 
 def test_adjust_in_allows_zero_target_but_not_negative() -> None:

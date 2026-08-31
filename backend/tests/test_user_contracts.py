@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.config import get_settings
 from app.core.database import Base
 from app.modules.user import contracts
 from app.seeds.seed_dev import run_seed
