@@ -16,6 +16,7 @@
     "loans": "وام‌ها",
     "reports": "گزارش‌ها",
     "settings": "تنظیمات",
+    "admin": "کنترل دسترسی",
     "menu": "منو",
     "groups": {
       "operations": "عملیات",
@@ -66,6 +67,118 @@
   },
   "a11y": {
     "skipToContent": "پرش به محتوای اصلی"
+  },
+  "employees": {
+    "eyebrow": "نیروی انسانی",
+    "title": "کارکنان",
+    "description": "ثبت، ویرایش و غیرفعال‌سازی کارکنان همراه با حساب کاربری آن‌ها.",
+    "searchPlaceholder": "جستجو بر اساس نام، کد ملی یا کد پرسنلی…",
+    "statusFilter": "فیلتر وضعیت",
+    "newEmployee": "کارمند جدید",
+    "empty": "کارمندی مطابق فیلترهای فعلی یافت نشد.",
+    "pagination": "صفحه‌بندی",
+    "prevPage": "قبلی",
+    "nextPage": "بعدی",
+    "status": {
+      "active": "فعال",
+      "deactivated": "غیرفعال",
+      "all": "همه"
+    },
+    "table": {
+      "name": "نام",
+      "nationalId": "کد ملی",
+      "personnelCode": "کد پرسنلی",
+      "workplace": "محل کار",
+      "status": "وضعیت",
+      "actions": "عملیات"
+    },
+    "actions": {
+      "edit": "ویرایش",
+      "deactivate": "غیرفعال‌سازی",
+      "confirmDeactivate": "مطمئنید؟",
+      "reactivate": "فعال‌سازی مجدد",
+      "setPassword": "تنظیم گذرواژه"
+    },
+    "form": {
+      "identitySection": "شناسنامه",
+      "assignmentSection": "محل خدمت",
+      "accountSection": "حساب ورود",
+      "nationalId": "کد ملی (۱۰ رقم)",
+      "personnelCode": "کد پرسنلی",
+      "firstName": "نام",
+      "lastName": "نام خانوادگی",
+      "firstNameFa": "نام (فارسی)",
+      "lastNameFa": "نام خانوادگی (فارسی)",
+      "birthDate": "تاریخ تولد",
+      "phone": "تلفن",
+      "workplace": "محل کار",
+      "workplacePlaceholder": "یک محل کار انتخاب کنید…",
+      "email": "ایمیل سازمانی",
+      "username": "نام کاربری",
+      "password": "گذرواژه اولیه (حداقل ۸ نویسه)",
+      "save": "ذخیره",
+      "saving": "در حال ذخیره…",
+      "cancel": "انصراف"
+    },
+    "passwordDialog": {
+      "title": "تنظیم گذرواژه جدید",
+      "description": "گذرواژه جدیدی برای {name} انتخاب کنید. نشست‌های فعال او خروج خواهند شد.",
+      "submit": "تنظیم گذرواژه"
+    },
+    "validation": {
+      "Invalid input: expected string matching pattern": "کد ملی باید دقیقاً ۱۰ رقم باشد.",
+      "Too small: expected string to have >=8 characters": "گذرواژه باید حداقل ۸ نویسه باشد.",
+      "Invalid email address": "یک ایمیل معتبر وارد کنید.",
+      "Invalid input": "این فیلد نامعتبر است."
+    },
+    "errors": {
+      "DUPLICATE_RESOURCE": "رکورد تکراری وجود دارد (کد ملی، کد پرسنلی، ایمیل یا نام کاربری).",
+      "VALIDATION_ERROR": "لطفاً فیلدهای مشخص‌شده را اصلاح کنید و دوباره تلاش کنید.",
+      "AUTHORIZATION_DENIED": "به این عملیات دسترسی ندارید.",
+      "STALE_VERSION": "این رکورد از زمان باز شدن تغییر کرده — بازخوانی و تلاش کنید.",
+      "CONFLICT_CONCURRENT_UPDATE": "این رکورد توسط شخص دیگری به‌روزرسانی شده — بازخوانی و تلاش کنید.",
+      "RESOURCE_NOT_FOUND": "کارمند درخواستی یافت نشد.",
+      "AUTHENTICATION_REQUIRED": "لطفاً ابتدا وارد شوید.",
+      "INTERNAL_ERROR": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.",
+      "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
+    }
+  },
+  "admin": {
+    "eyebrow": "مدیریت",
+    "title": "کنترل دسترسی",
+    "description": "مدیریت نقش‌ها، مرور فهرست مجوزها و تخصیص دسترسی کاربران.",
+    "tabs": {
+      "roles": "نقش‌ها",
+      "permissions": "مجوزها",
+      "users": "کاربران"
+    },
+    "roles": {
+      "createTitle": "ایجاد نقش",
+      "namePlaceholder": "نام نقش",
+      "create": "ایجاد",
+      "title": "نقش‌های تخصیص‌یافته",
+      "assign": "تخصیص",
+      "revoke": "سلب"
+    },
+    "scope": {
+      "title": "دامنه‌های دسترسی",
+      "level": "سطح",
+      "global": "سراسری",
+      "complex": "مجتمع",
+      "workplace": "محل کار",
+      "targetPlaceholder": "هدف به شکل module:resource:operation",
+      "assign": "تخصیص دامنه",
+      "remove": "حذف",
+      "invalidTarget": "هدف را به شکل module:resource:operation وارد کنید (مثل user:employee:read)."
+    },
+    "user": {
+      "pickPrompt": "یک کاربر را انتخاب کنید تا نقش‌ها و دامنه‌های او را مدیریت کنید.",
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
+    "errors": {
+      "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
+    }
   },
   "home": {
     "eyebrow": "کک و فولاد زرند",

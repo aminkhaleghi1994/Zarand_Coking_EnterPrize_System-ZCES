@@ -56,3 +56,35 @@ def can(
         assignment.target == operation and _covers(assignment, resolved_target)
         for assignment in context.scopes
     )
+
+
+@dataclass(frozen=True)
+class ScopeUnits:
+    """Resolved unit coverage for one operation: global flag + allowed unit ids."""
+
+    global_access: bool
+    complex_ids: frozenset[str] = field(default=frozenset())
+    workplace_ids: frozenset[str] = field(default=frozenset())
+
+
+def allowed_units(context: ScopeContext, operation: str) -> ScopeUnits:
+    """Unit coverage of an operation per the same rules as `can` (union, both gates)."""
+    if not context.is_active or operation not in context.permission_codes:
+        return ScopeUnits(global_access=False)
+    global_access = False
+    complex_ids: set[str] = set()
+    workplace_ids: set[str] = set()
+    for assignment in context.scopes:
+        if assignment.target != operation:
+            continue
+        if assignment.level == "global":
+            global_access = True
+        elif assignment.level == "complex" and assignment.complex_id:
+            complex_ids.add(assignment.complex_id)
+        elif assignment.level == "workplace" and assignment.workplace_id:
+            workplace_ids.add(assignment.workplace_id)
+    return ScopeUnits(
+        global_access=global_access,
+        complex_ids=frozenset(complex_ids),
+        workplace_ids=frozenset(workplace_ids),
+    )

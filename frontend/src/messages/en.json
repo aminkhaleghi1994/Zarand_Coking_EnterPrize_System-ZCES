@@ -16,6 +16,7 @@
     "loans": "Loans",
     "reports": "Reports",
     "settings": "Settings",
+    "admin": "Access Control",
     "menu": "Menu",
     "groups": {
       "operations": "Operations",
@@ -66,6 +67,118 @@
   },
   "a11y": {
     "skipToContent": "Skip to main content"
+  },
+  "employees": {
+    "eyebrow": "Workforce",
+    "title": "Employees",
+    "description": "Enroll, edit and deactivate employees with their linked accounts.",
+    "searchPlaceholder": "Search by name, national ID or personnel code…",
+    "statusFilter": "Status filter",
+    "newEmployee": "New employee",
+    "empty": "No employees match the current filters.",
+    "pagination": "Pagination",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "status": {
+      "active": "Active",
+      "deactivated": "Deactivated",
+      "all": "All"
+    },
+    "table": {
+      "name": "Name",
+      "nationalId": "National ID",
+      "personnelCode": "Personnel code",
+      "workplace": "Workplace",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "confirmDeactivate": "Confirm?",
+      "reactivate": "Reactivate",
+      "setPassword": "Set password"
+    },
+    "form": {
+      "identitySection": "Identity",
+      "assignmentSection": "Assignment",
+      "accountSection": "Sign-in account",
+      "nationalId": "National ID (10 digits)",
+      "personnelCode": "Personnel code",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "firstNameFa": "First name (Persian)",
+      "lastNameFa": "Last name (Persian)",
+      "birthDate": "Birth date",
+      "phone": "Phone",
+      "workplace": "Workplace",
+      "workplacePlaceholder": "Select a workplace…",
+      "email": "Work email",
+      "username": "Username",
+      "password": "Initial password (min 8 characters)",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "passwordDialog": {
+      "title": "Set new password",
+      "description": "Choose a new password for {name}. Their other sessions will be signed out.",
+      "submit": "Set password"
+    },
+    "validation": {
+      "Invalid input: expected string matching pattern": "National ID must be exactly 10 digits.",
+      "Too small: expected string to have >=8 characters": "Password must be at least 8 characters.",
+      "Invalid email address": "Enter a valid email address.",
+      "Invalid input": "This field is invalid."
+    },
+    "errors": {
+      "DUPLICATE_RESOURCE": "A duplicate record already exists (national ID, personnel code, email or username).",
+      "VALIDATION_ERROR": "Please fix the highlighted fields and try again.",
+      "AUTHORIZATION_DENIED": "You do not have access to this operation.",
+      "STALE_VERSION": "This record changed since you opened it — refresh and retry.",
+      "CONFLICT_CONCURRENT_UPDATE": "Someone else updated this record — refresh and retry.",
+      "RESOURCE_NOT_FOUND": "The requested employee was not found.",
+      "AUTHENTICATION_REQUIRED": "Please sign in first.",
+      "INTERNAL_ERROR": "Something went wrong. Please try again.",
+      "generic": "The operation failed. Please try again."
+    }
+  },
+  "admin": {
+    "eyebrow": "Administration",
+    "title": "Access Control",
+    "description": "Manage roles, review the permission catalog and assign user access.",
+    "tabs": {
+      "roles": "Roles",
+      "permissions": "Permissions",
+      "users": "Users"
+    },
+    "roles": {
+      "createTitle": "Create a role",
+      "namePlaceholder": "Role name",
+      "create": "Create",
+      "title": "Assigned roles",
+      "assign": "Assign",
+      "revoke": "Revoke"
+    },
+    "scope": {
+      "title": "Scope assignments",
+      "level": "Level",
+      "global": "Global",
+      "complex": "Complex",
+      "workplace": "Workplace",
+      "targetPlaceholder": "target as module:resource:operation",
+      "assign": "Assign scope",
+      "remove": "Remove",
+      "invalidTarget": "Enter the target as module:resource:operation (e.g. user:employee:read)."
+    },
+    "user": {
+      "pickPrompt": "Select a user to manage their roles and scopes.",
+      "active": "active",
+      "inactive": "inactive"
+    },
+    "errors": {
+      "generic": "The operation failed. Please try again."
+    }
   },
   "home": {
     "eyebrow": "Zarand Coking & Steel",

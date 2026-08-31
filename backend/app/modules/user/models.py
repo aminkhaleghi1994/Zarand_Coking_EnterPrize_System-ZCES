@@ -1,9 +1,10 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -16,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.mixins import (
+    AuditableEntity,
     CreatedByMixin,
     IDMixin,
     SoftDeleteMixin,
@@ -53,6 +55,12 @@ class User(
     username: Mapped[str] = mapped_column(String(100), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("employees.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+    )
 
     __table_args__ = (
         Index(
@@ -67,6 +75,70 @@ class User(
             unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
+    )
+
+
+class Company(AuditableEntity, Base):
+    __tablename__ = "companies"
+
+    code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    name_fa: Mapped[str] = mapped_column(String(200), nullable=False)
+
+
+class Complex(AuditableEntity, Base):
+    __tablename__ = "complexes"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    name_fa: Mapped[str] = mapped_column(String(200), nullable=False)
+
+
+class Workplace(AuditableEntity, Base):
+    __tablename__ = "workplaces"
+
+    complex_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("complexes.id", ondelete="RESTRICT"), nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    name_fa: Mapped[str] = mapped_column(String(200), nullable=False)
+
+
+class Employee(AuditableEntity, Base):
+    __tablename__ = "employees"
+
+    workplace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("workplaces.id", ondelete="RESTRICT"), nullable=False
+    )
+    national_id: Mapped[str] = mapped_column(String(10), nullable=False)
+    personnel_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    first_name_fa: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_name_fa: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    __table_args__ = (
+        Index(
+            "uq_employee_national_id_active",
+            "national_id",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        Index(
+            "uq_employee_personnel_code_active",
+            "personnel_code",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        Index("ix_employees_workplace_id", "workplace_id"),
+        Index("ix_employees_last_name", "last_name"),
     )
 
 
@@ -154,8 +226,16 @@ class ScopeAssignment(IDMixin, TimestampMixin, Base):
     module: Mapped[str] = mapped_column(String(100), nullable=False)
     resource: Mapped[str] = mapped_column(String(100), nullable=False)
     operation: Mapped[str] = mapped_column(String(100), nullable=False)
-    complex_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
-    workplace_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    complex_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("complexes.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    workplace_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("workplaces.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
 
     __table_args__ = (Index("ix_scope_assignments_user_id", "user_id"),)
 

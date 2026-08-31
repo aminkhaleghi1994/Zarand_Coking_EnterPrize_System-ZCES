@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.3.0] - 2026-08-31
+
+### Added
+- Org structure & employees (Phase 3): seeded Company/Complex/Workplace tree (2 complexes, 4 workplaces, idempotent by natural codes), employees created atomically with their 1:1 user account (bcrypt initial password, masked audit), partial unique indexes making national_id/personnel_code unique among active employees with reuse after deactivation, scope-filtered paginated employee directory (search + status filter, read_full masking), version-guarded edits with immutable identity anchors and in-scope workplace moves, deactivation cascading to the linked user with refresh-family revocation, audited admin password reset, and the first management UI (employees table/form + access control: roles, permissions, per-user roles and scopes)
+
 ## [0.2.0] - 2026-08-29
 
 ### Added

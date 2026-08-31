@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   MonitorSmartphone,
   Settings,
+  ShieldCheck,
   Users,
   Warehouse,
   type LucideIcon,
@@ -35,6 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: "system",
     items: [
+      { key: "admin", icon: ShieldCheck, href: "/admin" },
       { key: "reports", icon: ChartColumnBig, phase: 9 },
       { key: "settings", icon: Settings, phase: 9 },
     ],
