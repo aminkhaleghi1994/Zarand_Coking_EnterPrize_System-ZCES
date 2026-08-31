@@ -8,6 +8,13 @@
 
 **Input**: Phase 3 of the implementation roadmap — organizational structure (Company → Complex → Workplace) with seed data, employee records with a mandatory one-to-one user account, duplicate identity prevention, scope-filtered employee visibility, deactivation cascade, and the first administrative UI for employees, roles, permissions, and scope assignment.
 
+## Clarifications
+
+### Session 2026-08-31
+
+- Q: After an employee's account exists, what should happen when their password is lost or compromised? → A: Administrators can set a new password for any in-scope user as an audited operation (sensitive material masked in the audit trail).
+- Q: Should the employee directory show deactivated employees by default, or hide them? → A: Active employees only by default, with a status filter (active / deactivated / all).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Organization tree exists and is seeded (Priority: P1)
@@ -102,7 +109,8 @@ the scope rules on real data.
 
 **Independent Test**: Logged in as a workplace-scoped admin, the list shows only
 that workplace's employees; edit works within scope and is denied outside it;
-list responses are paginated.
+list responses are paginated; deactivated employees reappear via the status
+filter for reactivation.
 
 **Acceptance Scenarios**:
 
@@ -190,7 +198,11 @@ cannot reach the surfaces.
 4. **Given** a user, **When** the administrator assigns a complex-level scope
    without naming the complex, **Then** the assignment is rejected; with a
    named complex it succeeds and is audited.
-5. **Given** an administrator lacking the management permissions, **When** they
+5. **Given** a user, **When** the administrator sets a new password for them,
+   **Then** the user can subsequently sign in with the new credential and the
+   old one stops working; the audit entry shows the operation without any
+   credential material.
+6. **Given** an administrator lacking the management permissions, **When** they
    attempt any of the above, **Then** the system denies with the standard
    authorization error and the UI surfaces are not offered.
 
@@ -266,6 +278,10 @@ cannot reach the surfaces.
   user's active sessions immediately; reactivation restores both.
 - **FR-014**: Deactivation of an already-deactivated employee MUST succeed
   without error (idempotent) and still be audited.
+- **FR-021**: Administrators MUST be able to set a new password for an
+  in-scope user as an audited operation; the credential material itself MUST
+  never appear in the audit trail, responses, or logs, and the operation MUST
+  follow the same credential rules as account creation.
 
 **Access control (applies to every operation above)**
 
@@ -275,7 +291,8 @@ cannot reach the surfaces.
   their complex, a global actor all; anything else is implicitly denied.
 - **FR-016**: Employee listings MUST be paginated with a bounded page size and
   MUST support search by name, national ID, and personnel code within the
-  caller's scope.
+  caller's scope. The default listing MUST show active employees only, with a
+  status filter (active / deactivated / all) available to the caller.
 - **FR-017**: Authorization denials MUST NOT reveal whether the requested
   resource exists (single standard authorization error).
 
@@ -333,9 +350,9 @@ cannot reach the surfaces.
 - **SC-005**: After deactivation, the deactivated user cannot sign in and all
   their previously active sessions stop working within the same interaction;
   reactivation restores access.
-- **SC-006**: Every create/edit/move/deactivate/role/scope change performed in
-  this phase appears in the audit trail with masked snapshots — 100% coverage
-  verified by tests.
+- **SC-006**: Every create/edit/move/deactivate/reactivate/password-reset/
+  role/scope change performed in this phase appears in the audit trail with
+  masked snapshots — 100% coverage verified by tests.
 - **SC-007**: Both locales (English and Persian) present every new surface
   completely, with correct right-to-left rendering in Persian, at mobile and
   desktop widths.

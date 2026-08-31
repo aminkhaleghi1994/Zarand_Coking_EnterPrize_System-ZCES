@@ -35,6 +35,9 @@
   markers required — the two candidate ambiguities (initial password handling,
   immutability of national_id/personnel_code) were confirmed with the product
   owner before specification and are recorded in Assumptions.
+- Clarify session 2026-08-31: 2 questions asked and answered (admin password
+  reset in phase; active-only default list with status filter). Both integrated
+  as FR-021 and FR-016 update; re-validation: 16/16 items passing.
 - Soft-delete semantics for identity reuse (FR-008) deliberately mirror the
   requirements document §11 partial-unique rule in business terms.
 - "Module contracts" appear only as a dependency statement (Assumptions), not
