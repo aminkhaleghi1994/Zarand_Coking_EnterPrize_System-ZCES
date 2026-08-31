@@ -53,6 +53,23 @@ BASE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("user:org:read", "View organization structure", "مشاهده ساختار سازمانی"),
     ("audit:log:read", "Read audit logs", "مشاهده لاگ‌های ممیزی"),
     ("audit:log:read_full", "Read full audit snapshots", "مشاهده کامل اسنپ‌شات‌های ممیزی"),
+    ("warehouse:item:create", "Create catalog items", "ایجاد کالا در کاتالوگ"),
+    ("warehouse:item:read", "View catalog items", "مشاهده کالاهای کاتالوگ"),
+    ("warehouse:item:update", "Update catalog items", "ویرایش کالاهای کاتالوگ"),
+    ("warehouse:item:retire", "Retire catalog items", "بازنشسته‌کردن کالاهای کاتالوگ"),
+    ("warehouse:warehouse:create", "Create warehouses", "ایجاد انبار"),
+    ("warehouse:warehouse:read", "View warehouses", "مشاهده انبارها"),
+    ("warehouse:warehouse:update", "Update warehouses", "ویرایش انبارها"),
+    ("warehouse:warehouse:retire", "Retire warehouses", "بازنشسته‌کردن انبارها"),
+    ("warehouse:shelf:create", "Create shelves", "ایجاد قفسه"),
+    ("warehouse:shelf:read", "View shelves", "مشاهده قفسه‌ها"),
+    ("warehouse:shelf:update", "Update shelves", "ویرایش قفسه‌ها"),
+    ("warehouse:shelf:retire", "Retire shelves", "بازنشسته‌کردن قفسه‌ها"),
+    ("warehouse:stock:receive", "Receive stock", "ثبت ورودی کالا"),
+    ("warehouse:stock:issue", "Issue stock", "ثبت خروجی کالا"),
+    ("warehouse:stock:adjust", "Adjust stock", "اصلاح موجودی کالا"),
+    ("warehouse:stock:read", "View stock", "مشاهده موجودی کالا"),
+    ("warehouse:alert:read", "View low-stock alerts", "مشاهده هشدارهای کمبود موجودی"),
 ]
 
 BASE_ROLES: list[str] = [
@@ -69,6 +86,28 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     "SuperAdmin": [code for code, _, _ in BASE_PERMISSIONS],
     "Auditor": ["audit:log:read", "audit:log:read_full", "user:list:read"],
     "Manager": ["user:list:read"],
+    "WarehouseKeeper": [
+        "warehouse:item:create",
+        "warehouse:item:read",
+        "warehouse:item:update",
+        "warehouse:item:retire",
+        "warehouse:warehouse:read",
+        "warehouse:shelf:create",
+        "warehouse:shelf:read",
+        "warehouse:shelf:update",
+        "warehouse:shelf:retire",
+        "warehouse:stock:receive",
+        "warehouse:stock:issue",
+        "warehouse:stock:read",
+        "warehouse:alert:read",
+    ],
+    "WarehouseApprover": [
+        "warehouse:item:read",
+        "warehouse:warehouse:read",
+        "warehouse:shelf:read",
+        "warehouse:stock:read",
+        "warehouse:alert:read",
+    ],
 }
 
 UNSAFE_PASSWORDS = {"change_me_now", "change_me", "admin", "password", "12345678"}
