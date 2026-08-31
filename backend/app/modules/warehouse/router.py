@@ -14,12 +14,28 @@ from app.modules.warehouse.schemas import (
     ItemOut,
     ItemRetireIn,
     ItemUpdateIn,
+    ShelfCreateIn,
+    ShelfOut,
+    ShelfRetireIn,
+    ShelfUpdateIn,
+    WarehouseCreateIn,
+    WarehouseOut,
+    WarehouseRetireIn,
+    WarehouseUpdateIn,
 )
 
 require_item_read = require_operation("warehouse:item:read")
 require_item_create = require_operation("warehouse:item:create")
 require_item_update = require_operation("warehouse:item:update")
 require_item_retire = require_operation("warehouse:item:retire")
+require_warehouse_read = require_operation("warehouse:warehouse:read")
+require_warehouse_create = require_operation("warehouse:warehouse:create")
+require_warehouse_update = require_operation("warehouse:warehouse:update")
+require_warehouse_retire = require_operation("warehouse:warehouse:retire")
+require_shelf_read = require_operation("warehouse:shelf:read")
+require_shelf_create = require_operation("warehouse:shelf:create")
+require_shelf_update = require_operation("warehouse:shelf:update")
+require_shelf_retire = require_operation("warehouse:shelf:retire")
 
 router = APIRouter(tags=["warehouse"])
 
@@ -79,3 +95,93 @@ def post_item_retire(
 ) -> ItemOut:
     item = service.retire_item(session, context, item_id, payload)
     return repository.to_item_out(item)
+
+
+# --- Warehouses & shelves (US2) ---
+
+
+@router.get("/warehouse/warehouses", response_model=Page[WarehouseOut])
+def get_warehouses(
+    params: PageParams = Depends(),
+    workplace_id: uuid.UUID | None = None,
+    context: ScopeContext = Depends(require_warehouse_read),
+    session: Session = Depends(get_db),
+) -> Page[WarehouseOut]:
+    return repository.list_warehouses(session, context, params, workplace_id=workplace_id)
+
+
+@router.post("/warehouse/warehouses", response_model=WarehouseOut, status_code=201)
+def post_warehouse(
+    payload: WarehouseCreateIn,
+    context: ScopeContext = Depends(require_warehouse_create),
+    session: Session = Depends(get_db),
+) -> WarehouseOut:
+    warehouse = service.create_warehouse(session, context, payload)
+    return repository.to_warehouse_out(warehouse)
+
+
+@router.patch("/warehouse/warehouses/{warehouse_id}", response_model=WarehouseOut)
+def patch_warehouse(
+    warehouse_id: uuid.UUID,
+    payload: WarehouseUpdateIn,
+    context: ScopeContext = Depends(require_warehouse_update),
+    session: Session = Depends(get_db),
+) -> WarehouseOut:
+    warehouse = service.update_warehouse(session, context, warehouse_id, payload)
+    return repository.to_warehouse_out(warehouse)
+
+
+@router.post("/warehouse/warehouses/{warehouse_id}/retire", response_model=WarehouseOut)
+def post_warehouse_retire(
+    warehouse_id: uuid.UUID,
+    payload: WarehouseRetireIn,
+    context: ScopeContext = Depends(require_warehouse_retire),
+    session: Session = Depends(get_db),
+) -> WarehouseOut:
+    warehouse = service.retire_warehouse(session, context, warehouse_id, payload)
+    return repository.to_warehouse_out(warehouse)
+
+
+@router.get("/warehouse/warehouses/{warehouse_id}/shelves", response_model=Page[ShelfOut])
+def get_shelves(
+    warehouse_id: uuid.UUID,
+    params: PageParams = Depends(),
+    context: ScopeContext = Depends(require_shelf_read),
+    session: Session = Depends(get_db),
+) -> Page[ShelfOut]:
+    return repository.list_shelves(session, context, params, warehouse_id=warehouse_id)
+
+
+@router.post(
+    "/warehouse/warehouses/{warehouse_id}/shelves", response_model=ShelfOut, status_code=201
+)
+def post_shelf(
+    warehouse_id: uuid.UUID,
+    payload: ShelfCreateIn,
+    context: ScopeContext = Depends(require_shelf_create),
+    session: Session = Depends(get_db),
+) -> ShelfOut:
+    shelf = service.create_shelf(session, context, warehouse_id, payload)
+    return repository.to_shelf_out(shelf)
+
+
+@router.patch("/warehouse/shelves/{shelf_id}", response_model=ShelfOut)
+def patch_shelf(
+    shelf_id: uuid.UUID,
+    payload: ShelfUpdateIn,
+    context: ScopeContext = Depends(require_shelf_update),
+    session: Session = Depends(get_db),
+) -> ShelfOut:
+    shelf = service.update_shelf(session, context, shelf_id, payload)
+    return repository.to_shelf_out(shelf)
+
+
+@router.post("/warehouse/shelves/{shelf_id}/retire", response_model=ShelfOut)
+def post_shelf_retire(
+    shelf_id: uuid.UUID,
+    payload: ShelfRetireIn,
+    context: ScopeContext = Depends(require_shelf_retire),
+    session: Session = Depends(get_db),
+) -> ShelfOut:
+    shelf = service.retire_shelf(session, context, shelf_id, payload)
+    return repository.to_shelf_out(shelf)

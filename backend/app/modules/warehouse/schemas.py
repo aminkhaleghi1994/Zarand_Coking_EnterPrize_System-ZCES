@@ -74,6 +74,14 @@ class ItemRetireIn(BaseModel):
     version: int = Field(ge=1)
 
 
+class WarehouseRetireIn(BaseModel):
+    version: int = Field(ge=1)
+
+
+class ShelfRetireIn(BaseModel):
+    version: int = Field(ge=1)
+
+
 class ItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

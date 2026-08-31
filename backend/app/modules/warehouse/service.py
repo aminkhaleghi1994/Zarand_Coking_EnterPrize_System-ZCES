@@ -14,21 +14,30 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.common.scope import ScopeContext
+from app.common.scope import ScopeContext, ScopeTarget, can
 from app.core.errors import (
     AUTHORIZATION_DENIED,
+    BUSINESS_RULE_VIOLATION,
     STALE_VERSION,
     AppError,
     duplicate_resource,
     not_found,
+    validation_error,
 )
 from app.modules.audit.contracts import write_audit
+from app.modules.user import contracts as user_contracts
 from app.modules.warehouse import repository
-from app.modules.warehouse.models import ItemCatalog
+from app.modules.warehouse.models import ItemCatalog, Shelf, Warehouse
 from app.modules.warehouse.schemas import (
     ItemCreateIn,
     ItemRetireIn,
     ItemUpdateIn,
+    ShelfCreateIn,
+    ShelfRetireIn,
+    ShelfUpdateIn,
+    WarehouseCreateIn,
+    WarehouseRetireIn,
+    WarehouseUpdateIn,
     format_quantity,
     quantize_quantity,
 )
@@ -36,6 +45,12 @@ from app.modules.warehouse.schemas import (
 _ITEM_CREATE = "warehouse:item:create"
 _ITEM_UPDATE = "warehouse:item:update"
 _ITEM_RETIRE = "warehouse:item:retire"
+_WAREHOUSE_CREATE = "warehouse:warehouse:create"
+_WAREHOUSE_UPDATE = "warehouse:warehouse:update"
+_WAREHOUSE_RETIRE = "warehouse:warehouse:retire"
+_SHELF_CREATE = "warehouse:shelf:create"
+_SHELF_UPDATE = "warehouse:shelf:update"
+_SHELF_RETIRE = "warehouse:shelf:retire"
 
 
 def _require_catalog_scope_any(context: ScopeContext, operation: str) -> None:
@@ -228,8 +243,331 @@ def retire_item(
     return item
 
 
+# --- warehouse_service (US2): warehouses & shelves ---
+
+
+def _warehouse_snapshot(warehouse: Warehouse) -> dict[str, object]:
+    return {
+        "id": str(warehouse.id),
+        "workplace_id": str(warehouse.workplace_id),
+        "code": warehouse.code,
+        "name": warehouse.name,
+        "name_fa": warehouse.name_fa,
+        "version": warehouse.version,
+    }
+
+
+def _shelf_snapshot(shelf: Shelf) -> dict[str, object]:
+    return {
+        "id": str(shelf.id),
+        "warehouse_id": str(shelf.warehouse_id),
+        "code": shelf.code,
+        "name": shelf.name,
+        "name_fa": shelf.name_fa,
+        "version": shelf.version,
+    }
+
+
+def _blocking_detail(
+    session: Session, *, warehouse_id: uuid.UUID | None = None, shelf_id: uuid.UUID | None = None
+) -> list[dict[str, str]]:
+    blockings = repository.list_blocking_placements(
+        session, warehouse_id=warehouse_id, shelf_id=shelf_id
+    )
+    return [
+        {
+            "placement_id": str(placement.id),
+            "item_id": str(placement.item_id),
+            "quantity": format_quantity(placement.quantity),
+        }
+        for placement in blockings
+    ]
+
+
+def _raise_if_blocked(
+    session: Session, *, warehouse_id: uuid.UUID | None = None, shelf_id: uuid.UUID | None = None
+) -> None:
+    blockings = _blocking_detail(session, warehouse_id=warehouse_id, shelf_id=shelf_id)
+    if blockings:
+        raise AppError(
+            BUSINESS_RULE_VIOLATION,
+            "Retirement is blocked while stock remains on the shelves",
+            status_code=422,
+            details={"blocking_placements": blockings},
+        )
+
+
+def create_warehouse(
+    session: Session, context: ScopeContext, payload: WarehouseCreateIn
+) -> Warehouse:
+    parents = user_contracts.get_workplace_with_parents(session, payload.workplace_id)
+    if parents is None:
+        raise not_found("Workplace not found")
+    if not parents.is_active:
+        raise validation_error("Workplace is deactivated")
+    if not can(
+        context,
+        _WAREHOUSE_CREATE,
+        ScopeTarget(complex_id=str(parents.complex_id), workplace_id=str(parents.id)),
+    ):
+        raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+    if repository.get_warehouse_by_code(session, payload.code) is not None:
+        raise duplicate_resource("An active warehouse with this code already exists")
+
+    warehouse = Warehouse(
+        workplace_id=parents.id,
+        company_id=parents.company_id,
+        complex_id=parents.complex_id,
+        code=payload.code,
+        name=payload.name,
+        name_fa=payload.name_fa,
+        created_by=uuid.UUID(context.user_id),
+        updated_by=uuid.UUID(context.user_id),
+    )
+    session.add(warehouse)
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise duplicate_resource("An active warehouse with this code already exists") from exc
+
+    write_audit(
+        session,
+        action="WAREHOUSE_CREATED",
+        entity_type="warehouse",
+        entity_id=warehouse.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        after=_warehouse_snapshot(warehouse),
+        critical=True,
+    )
+    session.commit()
+    return warehouse
+
+
+def update_warehouse(
+    session: Session, context: ScopeContext, warehouse_id: uuid.UUID, payload: WarehouseUpdateIn
+) -> Warehouse:
+    warehouse = repository.get_warehouse_in_scope(session, warehouse_id, context, _WAREHOUSE_UPDATE)
+    if warehouse is None or warehouse.deleted_at is not None:
+        raise not_found("Warehouse not found")
+    if warehouse.version != payload.version:
+        raise AppError(
+            STALE_VERSION,
+            "This record changed since you opened it — refresh and retry",
+            status_code=409,
+        )
+    before = _warehouse_snapshot(warehouse)
+    updates = payload.model_dump(exclude={"version"}, exclude_unset=True)
+    if "code" in updates and updates["code"] is not None:
+        warehouse.code = updates["code"]
+    if "name" in updates and updates["name"] is not None:
+        warehouse.name = updates["name"]
+    if "name_fa" in updates and updates["name_fa"] is not None:
+        warehouse.name_fa = updates["name_fa"]
+    warehouse.updated_by = uuid.UUID(context.user_id)
+    warehouse.version += 1
+    session.add(warehouse)
+    if repository.get_warehouse_by_code(session, warehouse.code) not in (None, warehouse):
+        session.rollback()
+        raise duplicate_resource("An active warehouse with this code already exists")
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise duplicate_resource("An active warehouse with this code already exists") from exc
+
+    write_audit(
+        session,
+        action="WAREHOUSE_UPDATED",
+        entity_type="warehouse",
+        entity_id=warehouse.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        before=before,
+        after=_warehouse_snapshot(warehouse),
+        critical=True,
+    )
+    session.commit()
+    return warehouse
+
+
+def retire_warehouse(
+    session: Session, context: ScopeContext, warehouse_id: uuid.UUID, payload: WarehouseRetireIn
+) -> Warehouse:
+    warehouse = repository.get_warehouse_in_scope(session, warehouse_id, context, _WAREHOUSE_RETIRE)
+    if warehouse is None:
+        raise not_found("Warehouse not found")
+    if warehouse.deleted_at is None:
+        if warehouse.version != payload.version:
+            raise AppError(
+                STALE_VERSION,
+                "This record changed since you opened it — refresh and retry",
+                status_code=409,
+            )
+        _raise_if_blocked(session, warehouse_id=warehouse.id)
+        before = _warehouse_snapshot(warehouse)
+        warehouse.deleted_at = datetime.now(UTC)
+        warehouse.updated_by = uuid.UUID(context.user_id)
+        warehouse.version += 1
+        session.add(warehouse)
+        write_audit(
+            session,
+            action="WAREHOUSE_RETIRED",
+            entity_type="warehouse",
+            entity_id=warehouse.id,
+            actor_user_id=uuid.UUID(context.user_id),
+            before=before,
+            after=_warehouse_snapshot(warehouse),
+            critical=True,
+        )
+    else:
+        write_audit(
+            session,
+            action="WAREHOUSE_RETIRED",
+            entity_type="warehouse",
+            entity_id=warehouse.id,
+            actor_user_id=uuid.UUID(context.user_id),
+            after=_warehouse_snapshot(warehouse),
+            critical=True,
+        )
+    session.commit()
+    return warehouse
+
+
+def create_shelf(
+    session: Session, context: ScopeContext, warehouse_id: uuid.UUID, payload: ShelfCreateIn
+) -> Shelf:
+    warehouse = repository.get_warehouse_in_scope(session, warehouse_id, context, _SHELF_CREATE)
+    if warehouse is None or warehouse.deleted_at is not None:
+        raise not_found("Warehouse not found")
+    if repository.get_shelf_by_code(session, warehouse.id, payload.code) is not None:
+        raise duplicate_resource("An active shelf with this code already exists in this warehouse")
+
+    shelf = Shelf(
+        warehouse_id=warehouse.id,
+        code=payload.code,
+        name=payload.name,
+        name_fa=payload.name_fa,
+        created_by=uuid.UUID(context.user_id),
+        updated_by=uuid.UUID(context.user_id),
+    )
+    session.add(shelf)
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise duplicate_resource(
+            "An active shelf with this code already exists in this warehouse"
+        ) from exc
+
+    write_audit(
+        session,
+        action="SHELF_CREATED",
+        entity_type="shelf",
+        entity_id=shelf.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        after=_shelf_snapshot(shelf),
+        critical=True,
+    )
+    session.commit()
+    return shelf
+
+
+def update_shelf(
+    session: Session, context: ScopeContext, shelf_id: uuid.UUID, payload: ShelfUpdateIn
+) -> Shelf:
+    shelf = repository.get_shelf_in_scope(session, shelf_id, context, _SHELF_UPDATE)
+    if shelf is None or shelf.deleted_at is not None:
+        raise not_found("Shelf not found")
+    if shelf.version != payload.version:
+        raise AppError(
+            STALE_VERSION,
+            "This record changed since you opened it — refresh and retry",
+            status_code=409,
+        )
+    before = _shelf_snapshot(shelf)
+    updates = payload.model_dump(exclude={"version"}, exclude_unset=True)
+    if "code" in updates and updates["code"] is not None:
+        shelf.code = updates["code"]
+    if "name" in updates:
+        shelf.name = updates["name"]
+    if "name_fa" in updates:
+        shelf.name_fa = updates["name_fa"]
+    shelf.updated_by = uuid.UUID(context.user_id)
+    shelf.version += 1
+    session.add(shelf)
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise duplicate_resource(
+            "An active shelf with this code already exists in this warehouse"
+        ) from exc
+
+    write_audit(
+        session,
+        action="SHELF_UPDATED",
+        entity_type="shelf",
+        entity_id=shelf.id,
+        actor_user_id=uuid.UUID(context.user_id),
+        before=before,
+        after=_shelf_snapshot(shelf),
+        critical=True,
+    )
+    session.commit()
+    return shelf
+
+
+def retire_shelf(
+    session: Session, context: ScopeContext, shelf_id: uuid.UUID, payload: ShelfRetireIn
+) -> Shelf:
+    shelf = repository.get_shelf_in_scope(session, shelf_id, context, _SHELF_RETIRE)
+    if shelf is None:
+        raise not_found("Shelf not found")
+    if shelf.deleted_at is None:
+        if shelf.version != payload.version:
+            raise AppError(
+                STALE_VERSION,
+                "This record changed since you opened it — refresh and retry",
+                status_code=409,
+            )
+        _raise_if_blocked(session, shelf_id=shelf.id)
+        before = _shelf_snapshot(shelf)
+        shelf.deleted_at = datetime.now(UTC)
+        shelf.updated_by = uuid.UUID(context.user_id)
+        shelf.version += 1
+        session.add(shelf)
+        write_audit(
+            session,
+            action="SHELF_RETIRED",
+            entity_type="shelf",
+            entity_id=shelf.id,
+            actor_user_id=uuid.UUID(context.user_id),
+            before=before,
+            after=_shelf_snapshot(shelf),
+            critical=True,
+        )
+    else:
+        write_audit(
+            session,
+            action="SHELF_RETIRED",
+            entity_type="shelf",
+            entity_id=shelf.id,
+            actor_user_id=uuid.UUID(context.user_id),
+            after=_shelf_snapshot(shelf),
+            critical=True,
+        )
+    session.commit()
+    return shelf
+
+
 __all__ = [
     "create_item",
+    "create_shelf",
+    "create_warehouse",
     "retire_item",
+    "retire_shelf",
+    "retire_warehouse",
     "update_item",
+    "update_shelf",
+    "update_warehouse",
 ]
