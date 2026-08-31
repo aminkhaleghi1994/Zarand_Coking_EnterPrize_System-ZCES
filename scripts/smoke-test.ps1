@@ -272,6 +272,48 @@ Check "roleless user gets 403 on admin endpoint (via admin API setup)" {
     Assert-True ($result.Status -eq 200) "roleless me failed"
 }
 
+# --- Employee flow (Phase 3, T020) ---
+
+Check "org tree seeded (4 workplaces)" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $result = Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    Assert-True ($result.Status -eq 200) "org workplaces failed: $($result.Status)"
+    $body = $result.Body | ConvertFrom-Json
+    Assert-True ($body.total -ge 4) "expected >= 4 workplaces, got $($body.total)"
+}
+
+Check "employee create + duplicate rejection + deactivate cascade" {
+    $csrf = $script:jar["zces_csrf"]
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $csrf }
+    $wps = (Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null $headers).Body | ConvertFrom-Json
+    $cp1 = ($wps.items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1).id
+    Assert-True ($null -ne $cp1) "CP1 workplace not found"
+    $ni = "8" + (Get-Random -Minimum 100000000 -Maximum 999999999)
+    $ni = $ni.Substring(0, 10)
+    $email = "smoke-$ni@zarandsteel.ir"
+    $create = Invoke-BffJson "POST" "/api/employees" @{
+        national_id = $ni; personnel_code = "SMK-$($ni.Substring(4))";
+        first_name = "Smoke"; last_name = "Employee"; workplace_id = $cp1;
+        user = @{ email = $email; username = "smoke-$ni"; password = "smoke-password-1" }
+    } $headers
+    Assert-True ($create.Status -eq 201) "employee create failed: $($create.Status) $($create.Body)"
+    $emp = $create.Body | ConvertFrom-Json
+    Assert-True ($null -ne $emp.id -and $null -ne $emp.user.id) "employee/user ids missing in create response"
+    Assert-True ($emp.national_id -is [string]) "national_id missing in response"
+    $dup = Invoke-BffJson "POST" "/api/employees" @{
+        national_id = $ni; personnel_code = "DIF-$($ni.Substring(4))";
+        first_name = "D"; last_name = "Up"; workplace_id = $cp1;
+        user = @{ email = "d$ni@zarandsteel.ir"; username = "d$ni"; password = "smoke-password-1" }
+    } $headers
+    Assert-True ($dup.Status -eq 409) "expected duplicate 409, got $($dup.Status)"
+    $deact = Invoke-BffJson "POST" "/api/employees/$($emp.id)/deactivate" @{ version = $emp.version } $headers
+    Assert-True ($deact.Status -eq 200) "deactivate failed: $($deact.Status)"
+    $empLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $email; password = "smoke-password-1" } $null
+    Assert-True ($empLogin.Status -eq 401) "deactivated employee could still sign in"
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red
@@ -280,3 +322,4 @@ if ($failures.Count -gt 0) {
 }
 Write-Host "SMOKE TEST PASSED: all checks green." -ForegroundColor Green
 exit 0
+

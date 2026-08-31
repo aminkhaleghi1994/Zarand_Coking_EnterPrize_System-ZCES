@@ -435,3 +435,23 @@ def post_user_password(
 ) -> SuccessOut:
     employee_service.set_user_password(session, context, user_id, payload.password)
     return SuccessOut()
+
+
+@admin_router.get("/users/{user_id}/roles")
+def get_user_roles(
+    user_id: uuid.UUID,
+    context: ScopeContext = Depends(require_role_read),
+    session: Session = Depends(get_db),
+) -> dict[str, list[str]]:
+    _ = context
+    return {"role_ids": [str(rid) for rid in repository.list_user_roles(session, user_id)]}
+
+
+@admin_router.get("/users/{user_id}/scopes")
+def get_user_scopes(
+    user_id: uuid.UUID,
+    context: ScopeContext = Depends(require_role_read),
+    session: Session = Depends(get_db),
+) -> dict[str, list[ScopeAssignmentOut]]:
+    _ = context
+    return {"items": repository.get_user_scopes(session, user_id)}

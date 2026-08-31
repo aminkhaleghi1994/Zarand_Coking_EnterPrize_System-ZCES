@@ -44,6 +44,10 @@ def get_user_role(session: Session, user_id: uuid.UUID, role_id: uuid.UUID) -> U
     )
 
 
+def list_user_roles(session: Session, user_id: uuid.UUID) -> list[uuid.UUID]:
+    return list(session.scalars(select(UserRole.role_id).where(UserRole.user_id == user_id)).all())
+
+
 def get_scope_assignment(
     session: Session, user_id: uuid.UUID, assignment_id: uuid.UUID
 ) -> ScopeAssignment | None:
