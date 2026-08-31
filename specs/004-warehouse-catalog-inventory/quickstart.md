@@ -56,10 +56,10 @@ npm run lint ; npx tsc --noEmit ; npm run build
 4. **Warehouses**: create a warehouse anchored to "Coke Plant 1" and a shelf
    `A-01` under it. Attempt to retire the shelf → blocked once it holds stock
    (business-rule error).
-5. **Stock → Receive**: receive 50 of Test Bearing onto A-01. The placement
-   row shows 42.000-style decimals after an issue. **Issue** 15 → quantity
-   drops, one movement line. **Issue** 999 → rejected with the
-   insufficient-stock error; quantity unchanged; no phantom movement line.
+5. **Stock → Receive**: receive 50 of Test Bearing onto A-01 (shown as
+   50.000). **Issue** 15 → quantity drops to 35.000 with one movement line.
+   **Issue** 999 → rejected with the insufficient-stock error; quantity
+   unchanged; no phantom movement line.
 6. **Adjust** (a user with only receive+issue gets a denial — verify with a
    scoped role): set the counted quantity to 30 → an `adjust` movement
    records the delta; history shows receive/issue/adjust with resulting

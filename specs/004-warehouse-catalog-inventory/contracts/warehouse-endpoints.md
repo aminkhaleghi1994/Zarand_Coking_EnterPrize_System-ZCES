@@ -108,11 +108,13 @@ with up to 3 fractional digits, always in the item's unit (R1/R5).
 
 ## Placements & stock
 
-### GET /warehouse/placements?warehouse_id=&item_id=&search=&page=&page_size=
+### GET /warehouse/placements?warehouse_id=&item_id=&search=&include_empty=&page=&page_size=
 - Permission: `warehouse:stock:read`; scope-filtered
-- Query: optional `warehouse_id`, `item_id`, `search` (item name/code);
-  **placements with quantity > 0 only** (empty placements are ledger
-  anchors, not working stock)
+- Query: optional `warehouse_id`, `item_id`, `search` (item name/code),
+  `include_empty` (default `false` — **placements with quantity > 0 only**,
+  since empty placements are ledger anchors, not working stock; `true`
+  includes zero-quantity placements so their history stays reachable after
+  the stock is drawn to zero or the shelf is retired)
 - 200: `{items: PlacementOut[], ...}`
 
 `PlacementOut`:

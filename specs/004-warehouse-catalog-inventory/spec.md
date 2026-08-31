@@ -160,7 +160,8 @@ placement's quantity drops below that threshold, the system raises a
 low-stock alert for that placement, records it in the audit trail, and makes
 active alerts visible so keepers can react before shelves run empty. Alerts
 do not duplicate while the condition persists; a new alert is raised only
-after the quantity recovered above the threshold and dropped again.
+after the quantity recovered to the threshold or above and dropped below
+again.
 
 **Why this priority**: The alert turns raw stock data into an actionable
 signal — the requirement's explicit "low stock alert" outcome — but it builds
@@ -168,8 +169,8 @@ on top of placements and movements, so it follows them.
 
 **Independent Test**: Set an item's threshold, bring a placement to or below
 it, observe one alert (with audit entry); issue more while below threshold and
-observe no duplicate alert; receive stock above the threshold and drop below
-again to observe a second alert.
+observe no duplicate alert; receive stock back to the threshold or above and
+drop below again to observe a second alert.
 
 **Acceptance Scenarios**:
 
@@ -179,8 +180,8 @@ again to observe a second alert.
 2. **Given** an active low-stock alert for a placement, **When** further
    issues keep the quantity below the threshold, **Then** no additional alert
    is created for the same condition.
-3. **Given** a placement that recovered above the threshold, **When** it
-   drops below again, **Then** a new alert is raised.
+3. **Given** a placement that recovered to the threshold or above, **When**
+   it drops below again, **Then** a new alert is raised.
 4. **Given** a permitted viewer, **When** they open the low-stock view,
    **Then** active alerts are listed scope-filtered with item, shelf,
    warehouse, current quantity, and threshold.
@@ -339,7 +340,10 @@ reduced-motion behavior.
   permission AND a valid organizational scope; a workplace-level actor reaches
   only their workplace's warehouses, a complex-level actor every warehouse of
   their complex's workplaces, a global actor all; anything else is implicitly
-  denied.
+  denied. The one documented exception is catalog **reading** (FR-003): the
+  item catalog is company-wide reference data, so reads require only the
+  permission, while catalog writes additionally require at least one active
+  warehouse scope (clarify-session decision; see research R5).
 - **FR-020**: All list endpoints MUST paginate with the standard envelope and
   a bounded page size; authorization denials MUST NOT reveal whether the
   requested resource exists.
