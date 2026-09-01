@@ -11,6 +11,23 @@ workplace/year; LoanRequest; validation cascade in the exact required order
 (lifetime count → yearly count → active loan cap → active guarantee cap);
 Jalali year math"
 
+## Clarifications
+
+### Session 2026-09-01
+
+- Q: Does a cancelled request still count toward the lifetime/yearly request
+  limits, or does cancelling free a count slot? → A: Cancelled keeps counting
+  (like settled) — nothing except physical deletion frees the count limits.
+- Q: Who submits a loan or guarantee request — the employee themselves or an
+  officer on their behalf? → A: Self-service only: the signed-in employee
+  submits their own request; officers manage policies and lifecycle
+  transitions. On-behalf registration is out of scope for this phase.
+- Q: Which requests count toward the active amount caps of the current Jalali
+  year — only requests of that year's snapshot, or every currently-active
+  request regardless of original year? → A: Only requests whose year snapshot
+  equals the year being validated; an old-year loan does not bind the new
+  year's cap.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Define and manage workplace loan policies (Priority: P1)
@@ -212,10 +229,11 @@ labels and native Farsi digits.
 
 **Requests & validation**
 
-- **FR-004**: The system MUST allow an employee to submit a loan or guarantee
-  request with a positive amount; the request records the employee, their
-  workplace, the type, the amount, and the Jalali year of submission as an
-  immutable year snapshot.
+- **FR-004**: The system MUST allow the signed-in employee to submit their own
+  loan or guarantee request (self-service, no on-behalf registration) with a
+  positive amount; the request records the employee, their workplace, the
+  type, the amount, and the Jalali year of submission as an immutable year
+  snapshot.
 - **FR-005**: The system MUST validate every new request against the
   submitting employee's workplace active policy for the request's year, in
   exactly this order: (1) lifetime request count, (2) current-year request
@@ -225,10 +243,12 @@ labels and native Farsi digits.
 - **FR-006**: Count limits MUST count every request ever made that is not
   physically deleted — including settled, cancelled, and soft-deleted ones;
   settled and cancelled requests MUST NOT free the count limits.
-- **FR-007**: Amount caps MUST count only requests whose status is active;
-  settling or cancelling a request MUST free its amount commitment;
-  soft-deleted requests MUST behave like their pre-deletion state for caps
-  (an active request that is soft-deleted still counts until settled).
+- **FR-007**: Amount caps MUST count only requests whose status is active and
+  whose year snapshot equals the year being validated (an old-year loan does
+  not bind the new year's cap); settling or cancelling a request MUST free
+  its amount commitment; soft-deleted requests MUST behave like their
+  pre-deletion state for caps (an active request that is soft-deleted still
+  counts until settled).
 - **FR-008**: The system MUST derive the calculation year from the Jalali
   calendar (submission date → Jalali year), not the Gregorian year.
 - **FR-009**: The system MUST refuse requests when the workplace has no
@@ -295,13 +315,6 @@ labels and native Farsi digits.
 
 ## Assumptions
 
-- Loan/guarantee requests are submitted self-service by the employee (the
-  platform's 1:1 employee↔user identity resolves the requester); LoanOfficer
-  and admins manage policies and lifecycle transitions. Registration on
-  behalf of another employee is out of scope for this phase.
-- A cancelled request behaves like a settled one for count semantics (never
-  frees counts); only active status counts toward amount caps — matching
-  §19's explicit settled/soft-deleted rules conservatively.
 - Policy retirement is soft-delete with no blocking rule: pending requests
   validate against the policy snapshot of their creation year; a retired
   policy simply stops accepting new requests.
