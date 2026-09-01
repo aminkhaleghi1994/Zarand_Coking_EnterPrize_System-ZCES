@@ -523,6 +523,84 @@ Check "assets: register + duplicate 409 + assign + blocked retire + return + ret
     Assert-True ($reuse.Status -eq 201) "serial reuse after retire failed: $($reuse.Status) $($reuse.Body)"
 }
 
+# --- Loan module flow (Phase 7, T018) ---
+
+Check "loans: policy create + duplicate 409 + cascade order + lifecycle + settle frees" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+
+    $workplaces = (Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+    $cp1 = ($workplaces.items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1)
+    Assert-True ($null -ne $cp1) "CP1 workplace not found"
+
+    $ni = "8" + (Get-Random -Minimum 100000000 -Maximum 999999999)
+    $ni = $ni.Substring(0, 10)
+    $email = "loansmoke-$ni@zarandsteel.ir"
+    $empCreate = Invoke-BffJson "POST" "/api/employees" @{
+        national_id = $ni; personnel_code = "LSM-$($ni.Substring(4))";
+        first_name = "Loan"; last_name = "Smoke"; workplace_id = $cp1.id;
+        user = @{ email = $email; username = "loansmoke-$ni"; password = "smoke-password-1" }
+    } $headers
+    Assert-True ($empCreate.Status -eq 201) "loan smoke employee create failed: $($empCreate.Status)"
+
+    # clean any leftover active policy for (CP1, current jalali year)
+    $persian = New-Object System.Globalization.PersianCalendar
+    $year = $persian.GetYear((Get-Date))
+    $existing = (Invoke-BffJson "GET" "/api/loan/policies?page_size=100&year=$year" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+    foreach ($p in ($existing.items | Where-Object { $_.workplace.id -eq $cp1.id })) {
+        $null = Invoke-BffJson "POST" "/api/loan/policies/$($p.id)/retire" @{ version = $p.version } $headers
+    }
+
+    $policy = Invoke-BffJson "POST" "/api/loan/policies" @{
+        workplace_id = $cp1.id; year = $year;
+        max_loan_amount = "100000000.00"; max_guarantee_amount = "50000000.00";
+        max_request_count_per_year = 20; max_request_count_lifetime = 20
+    } $headers
+    Assert-True ($policy.Status -eq 201) "policy create failed: $($policy.Status) $($policy.Body)"
+    $policyBody = $policy.Body | ConvertFrom-Json
+
+    $duplicate = Invoke-BffJson "POST" "/api/loan/policies" @{
+        workplace_id = $cp1.id; year = $year;
+        max_loan_amount = "1.00"; max_guarantee_amount = "1.00";
+        max_request_count_per_year = 1; max_request_count_lifetime = 1
+    } $headers
+    Assert-True ($duplicate.Status -eq 409) "expected duplicate policy 409, got $($duplicate.Status)"
+
+    $empLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $email; password = "smoke-password-1" } $null
+    Assert-True ($empLogin.Status -eq 200) "employee login failed"
+    $empJar = @{}
+    Update-JarFromCookies $empJar $empLogin.SetCookies
+    $empHeaders = @{ Cookie = Get-CookiesFromJar $empJar; "X-CSRF-Token" = $empJar["zces_csrf"] }
+
+    $big = Invoke-BffJson "POST" "/api/loan/requests" @{ type = "loan"; amount = "60000000.00" } $empHeaders
+    Assert-True ($big.Status -eq 201) "loan submit failed: $($big.Status) $($big.Body)"
+    $bigBody = $big.Body | ConvertFrom-Json
+
+    $over = Invoke-BffJson "POST" "/api/loan/requests" @{ type = "loan"; amount = "50000000.00" } $empHeaders
+    Assert-True ($over.Status -eq 422) "expected loan_cap 422, got $($over.Status)"
+    Assert-True ((($over.Body | ConvertFrom-Json).details.rule) -eq "loan_cap") "expected loan_cap rule"
+
+    $activate = Invoke-BffJson "POST" "/api/loan/requests/$($bigBody.id)/activate" @{ version = $bigBody.version } $headers
+    Assert-True ($activate.Status -eq 200) "activate failed: $($activate.Status) $($activate.Body)"
+    $activated = $activate.Body | ConvertFrom-Json
+
+    $settle = Invoke-BffJson "POST" "/api/loan/requests/$($bigBody.id)/settle" @{ version = $activated.version } $headers
+    Assert-True ($settle.Status -eq 200) "settle failed: $($settle.Status) $($settle.Body)"
+    Assert-True ((($settle.Body | ConvertFrom-Json).settled_at) -ne $null) "settled_at missing"
+
+    $afterSettle = Invoke-BffJson "POST" "/api/loan/requests" @{ type = "loan"; amount = "50000000.00" } $empHeaders
+    Assert-True ($afterSettle.Status -eq 201) "submit after settle should pass the freed cap: $($afterSettle.Status) $($afterSettle.Body)"
+
+    $retired = Invoke-BffJson "POST" "/api/loan/policies/$($policyBody.id)/retire" @{ version = $policyBody.version } $headers
+    Assert-True ($retired.Status -eq 200) "policy retire failed: $($retired.Status)"
+    $noPolicy = Invoke-BffJson "POST" "/api/loan/requests" @{ type = "loan"; amount = "1000000.00" } $empHeaders
+    Assert-True ($noPolicy.Status -eq 422) "expected no_policy 422 after retirement, got $($noPolicy.Status)"
+    Assert-True ((($noPolicy.Body | ConvertFrom-Json).details.rule) -eq "no_policy") "expected no_policy rule"
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red

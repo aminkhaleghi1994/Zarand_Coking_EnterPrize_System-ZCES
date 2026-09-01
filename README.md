@@ -16,12 +16,33 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 6 complete (Asset Tracking)** — on top of the Phase 1–5
+**Phase 7 complete (Loan & Guarantee Module)** — on top of the Phase 1–6
 foundation (platform, auth/RBAC/scopes, org & employees, warehouse catalog
-and inventory, item requests): asset instances with duplicate-proof serials,
-typed assignment to employees or locations, version-guarded returns and
-audited retirement with append-only lifecycle history. Phases 7–11 run
-sequentially; next: `loan-module`.
+and inventory, item requests, asset tracking): per-workplace Jalali-year
+loan policies, self-service loan/guarantee requests with the exact §19
+validation cascade, version-guarded lifecycle transitions, and Jalali year
+math. Phases 8–11 run sequentially; next: `notifications-outbox-sse`.
+
+## Loan module (Phase 7)
+
+**Module map**: `backend/app/modules/loan/` (first dedicated business
+module: models, schemas, repository, service, router) ·
+`app/common/jalali.py` (dependency-free Gregorian→Jalali) ·
+`frontend/src/features/loans/` + `app/api/loan/**` (BFF) · migration
+`0007_loan_module`.
+
+**Validation cascade (exact §19 order, first failure wins with the rule
+named in `details`)**: ① lifetime request count → ② yearly request count →
+③ active loan cap → ④ active guarantee cap. Settled, cancelled, and
+soft-deleted requests never free the count limits; only active requests of
+the validated Jalali year bind the amount caps; settlement/cancellation
+frees the commitment. Submissions lock the policy row, so concurrent
+submissions at a boundary resolve to exactly one winner.
+
+**Permissions** (seeded idempotently; `LoanOfficer` has all nine):
+`loan:policy:create` `read` `update` `retire` · `loan:request:create` `read`
+`activate` `settle` `cancel`. Self-service submission needs authentication
+only (own request, ownership-scoped visibility like item requests).
 
 ## Asset tracking (Phase 6)
 
