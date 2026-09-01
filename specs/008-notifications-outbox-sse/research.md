@@ -174,6 +174,12 @@ and the actor already in scope; critical flag comes from the mapping table
 **Rationale**: Exhaustive mapping keeps SC-001's 13/13 guarantee verifiable;
 the seed exemption prevents seed-time noise.
 
+**Deferred (decided 2026-09-01)**: `ItemReturned` has no emitting business
+action in the current product surface — the only return flow is asset
+returns (which emit `AssetReturned`); no return-to-stock flow exists. The
+type remains valid (CHECK + relay handle it) but no emitter is wired until a
+return flow ships; the capture matrix covers the 12 emittable events.
+
 ## R10 — API shapes
 
 **Decision** (full I/O in `contracts/notification-endpoints.md`):

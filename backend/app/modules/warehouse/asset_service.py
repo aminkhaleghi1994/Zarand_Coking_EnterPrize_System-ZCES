@@ -24,6 +24,7 @@ from app.core.errors import (
     validation_error,
 )
 from app.modules.audit.contracts import write_audit
+from app.modules.notification import contracts as notification_contracts
 from app.modules.user import contracts as user_contracts
 from app.modules.warehouse import asset_repository
 from app.modules.warehouse.models import AssetInstance, HolderType
@@ -390,6 +391,27 @@ def assign_asset(
         after=_asset_snapshot(asset, holder_name),
         critical=True,
     )
+    if to_employee_id is not None:
+        holder_user_id = user_contracts.get_user_id_for_employee(session, to_employee_id)
+        if holder_user_id is not None:
+            notification_contracts.record_event(
+                session,
+                "AssetAssigned",
+                {
+                    "entity_id": str(asset.id),
+                    "actor_user_id": str(uuid.UUID(context.user_id)),
+                    "title": "asset_assigned",
+                    "asset_name": asset.name,
+                    "asset_serial": asset.serial,
+                    "employee_id": str(to_employee_id),
+                    "holder_user_id": str(holder_user_id),
+                    "holder_name": holder_name,
+                    "audience": {
+                        "users": [str(holder_user_id), str(uuid.UUID(context.user_id))]
+                    },
+                },
+                actor_user_id=uuid.UUID(context.user_id),
+            )
     session.commit()
     return asset
 
@@ -447,6 +469,27 @@ def return_asset(
         after=_asset_snapshot(asset, holder_name),
         critical=True,
     )
+    if from_employee_id is not None:
+        holder_user_id = user_contracts.get_user_id_for_employee(session, from_employee_id)
+        if holder_user_id is not None:
+            notification_contracts.record_event(
+                session,
+                "AssetReturned",
+                {
+                    "entity_id": str(asset.id),
+                    "actor_user_id": str(uuid.UUID(context.user_id)),
+                    "title": "asset_returned",
+                    "asset_name": asset.name,
+                    "asset_serial": asset.serial,
+                    "employee_id": str(from_employee_id),
+                    "holder_user_id": str(holder_user_id),
+                    "holder_name": holder_name,
+                    "audience": {
+                        "users": [str(holder_user_id), str(uuid.UUID(context.user_id))]
+                    },
+                },
+                actor_user_id=uuid.UUID(context.user_id),
+            )
     session.commit()
     return asset
 

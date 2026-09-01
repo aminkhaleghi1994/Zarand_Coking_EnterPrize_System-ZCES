@@ -156,7 +156,7 @@ def apply_fulfillment_issue(
         reason=reason,
         actor_user_id=actor_user_id,
     )
-    _evaluate_alert(session, placement, item)
+    _evaluate_alert(session, placement, item, actor_user_id)
     write_audit_contract(
         session,
         movement_id=movement.id,

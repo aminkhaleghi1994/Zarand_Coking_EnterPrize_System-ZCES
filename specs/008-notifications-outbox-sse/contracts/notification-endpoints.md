@@ -73,11 +73,13 @@ data: {"id":"uuid","event_type":"LoanRequestActivated","payload":{...}}
 ## Capture contract (module-internal, for other modules)
 
 ```python
-record_event(session, event_type, payload, actor_user_id, critical=False)
-# appends an EventOutbox row in the caller's transaction
+record_event(session, event_type, payload, actor_user_id)
+# appends an EventOutbox row in the caller's transaction; raises ValueError
+# for unknown event types. Criticality is data-driven (CRITICAL_EVENTS).
 
-deliver_critical(session, event_type, payload, recipient_ids, actor_user_id)
-# writes Notification rows in the caller's transaction (Critical events)
+deliver_critical(session, event, recipient_user_ids)
+# writes Notification rows in the caller's transaction (Critical events) and
+# marks the event delivered so the relay never re-delivers those rows.
 ```
 
 `CRITICAL_EVENTS` mapping lives in the notification module (data-driven);

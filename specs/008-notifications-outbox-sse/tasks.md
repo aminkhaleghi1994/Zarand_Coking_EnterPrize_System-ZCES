@@ -31,7 +31,12 @@
 **Independent Test**: perform each mapped action → one outbox row; a rolled-back action → no row.
 
 - [ ] T004 [US1] `backend/app/modules/notification/contracts.py`: `record_event(session, event_type, payload, actor_user_id, critical=False)` + `deliver_critical(...)` + `CRITICAL_EVENTS` mapping (v1: InventoryLowStock); unit test: capture writes pending row in-session (research R1/R4)
-- [ ] T005 [US1] Wire capture into emitting services: employee+user creation (`UserCreated`, seed-exempt), catalog create, low-stock raise (+ critical in-transaction delivery), request create/approve/reject/fulfill, asset assign/return, loan create/activate/settle — each in the same transaction; test additions: 13-event capture matrix + rollback case (refused fulfillment leaves no row) (FR-001, FR-003, SC-001, research R9)
+- [ ] T005 [US1] Wire capture into emitting services: employee+user creation (`UserCreated`, seed-exempt), catalog create, low-stock raise (+ critical in-transaction delivery), request create/approve/reject/fulfill, asset assign/return, loan create/activate/settle — each in the same transaction; test additions: event capture matrix + rollback case (refused fulfillment leaves no row) (FR-001, FR-003, SC-001, research R9)
+  - **Deferred (decided 2026-09-01)**: `ItemReturned` has no emitting business
+    action in the current product surface (no return-to-stock flow exists; the
+    only return flow is asset returns, which emit `AssetReturned`). The type
+    stays valid — CHECK + relay deliver it — but no emitter is wired until a
+    return flow ships. The capture matrix covers the 12 emittable events.
 
 **Checkpoint**: all 13 events captured atomically; rollback-proof.
 
