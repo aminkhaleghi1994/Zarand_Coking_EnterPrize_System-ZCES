@@ -149,6 +149,41 @@ def test_seed_maps_warehouse_roles(pg_session):  # type: ignore[no-untyped-def]
     assert keeper_has_adjust is None, "adjust must stay outside the keeper role (clarify Q1)"
 
 
+LOAN_PERMISSION_CODES = {
+    "loan:policy:create",
+    "loan:policy:read",
+    "loan:policy:update",
+    "loan:policy:retire",
+    "loan:request:create",
+    "loan:request:read",
+    "loan:request:activate",
+    "loan:request:settle",
+    "loan:request:cancel",
+}
+
+
+@requires_database
+def test_seed_creates_loan_permissions(pg_session):  # type: ignore[no-untyped-def]
+    run_seed(pg_session, prod=False)
+    codes = set(pg_session.scalars(select(Permission.code)).all())
+    assert codes >= LOAN_PERMISSION_CODES
+
+
+@requires_database
+def test_seed_maps_loan_officer_role(pg_session):  # type: ignore[no-untyped-def]
+    run_seed(pg_session, prod=False)
+    role = pg_session.scalar(select(Role).where(Role.name == "LoanOfficer"))
+    assert role is not None
+    granted = set(
+        pg_session.scalars(
+            select(Permission.code)
+            .join(RolePermission, RolePermission.permission_id == Permission.id)
+            .where(RolePermission.role_id == role.id)
+        ).all()
+    )
+    assert granted >= LOAN_PERMISSION_CODES
+
+
 @requires_database
 def test_seed_prod_refuses_unsafe_password(pg_session):  # type: ignore[no-untyped-def]
     settings = get_settings()
