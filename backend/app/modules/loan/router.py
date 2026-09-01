@@ -38,13 +38,19 @@ require_request_cancel = require_operation("loan:request:cancel")
 @router.get("/loan/policies", response_model=Page[LoanPolicyOut])
 def get_policies(
     params: PageParams = Depends(),
+    workplace_id: uuid.UUID | None = Query(default=None),
     year: int | None = Query(default=None, ge=1300, le=1500),
     include_retired: bool = Query(default=False),
     context: ScopeContext = Depends(require_policy_read),
     session: Session = Depends(get_db),
 ) -> Page[LoanPolicyOut]:
     return repository.list_policies(
-        session, context, params, year=year, include_retired=include_retired
+        session,
+        context,
+        params,
+        workplace_id=workplace_id,
+        year=year,
+        include_retired=include_retired,
     )
 
 
@@ -96,6 +102,7 @@ def get_requests(
     type: str | None = Query(default=None, pattern="^(loan|guarantee)$"),
     status: str = Query(default="all", pattern="^(pending|active|settled|cancelled|all)$"),
     year: int | None = Query(default=None, ge=1300, le=1500),
+    search: str | None = Query(default=None, max_length=200),
     context: ScopeContext = Depends(load_context),
     session: Session = Depends(get_db),
 ) -> Page[LoanRequestOut]:
@@ -107,6 +114,7 @@ def get_requests(
         type=type,
         status=status,
         year=year,
+        search=search,
     )
 
 

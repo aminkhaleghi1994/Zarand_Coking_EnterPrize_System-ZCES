@@ -150,6 +150,7 @@ def create_policy(
         entity_id=policy.id,
         actor_user_id=uuid.UUID(context.user_id),
         after=_policy_snapshot(policy, workplace),
+        critical=True,
     )
     session.commit()
     session.refresh(policy)
@@ -205,6 +206,7 @@ def update_policy(
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
         after=_policy_snapshot(policy, workplace),
+        critical=True,
     )
     session.commit()
     session.refresh(policy)
@@ -234,6 +236,7 @@ def retire_policy(
         entity_id=policy.id,
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
+        critical=True,
     )
     session.commit()
     session.refresh(policy)
@@ -360,6 +363,7 @@ def submit_request(
         entity_id=request.id,
         actor_user_id=uuid.UUID(context.user_id),
         after=_request_snapshot(request),
+        critical=True,
     )
     session.commit()
     session.refresh(request)
@@ -417,6 +421,7 @@ def activate_request(
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
         after=_request_snapshot(request),
+        critical=True,
     )
     session.commit()
     session.refresh(request)
@@ -449,6 +454,7 @@ def settle_request(
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
         after=_request_snapshot(request),
+        critical=True,
     )
     session.commit()
     session.refresh(request)
@@ -480,6 +486,7 @@ def cancel_request(
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
         after=_request_snapshot(request),
+        critical=True,
     )
     session.commit()
     session.refresh(request)

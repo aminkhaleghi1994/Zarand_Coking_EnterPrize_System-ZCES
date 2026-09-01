@@ -240,6 +240,7 @@ function PolicyForm({
   const [maxGuarantee, setMaxGuarantee] = useState(policy?.max_guarantee_amount ?? "");
   const [perYear, setPerYear] = useState(String(policy?.max_request_count_per_year ?? ""));
   const [lifetime, setLifetime] = useState(String(policy?.max_request_count_lifetime ?? ""));
+  const [isActive, setIsActive] = useState(policy?.is_active ?? true);
   const [error, setError] = useState<string | null>(null);
 
   const workplacesQuery = useQuery({
@@ -282,6 +283,7 @@ function PolicyForm({
           max_guarantee_amount: parsed.data.max_guarantee_amount,
           max_request_count_per_year: parsed.data.max_request_count_per_year,
           max_request_count_lifetime: parsed.data.max_request_count_lifetime,
+          is_active: isActive,
           version: policy!.version,
         }
       : parsed.data;
@@ -326,6 +328,25 @@ function PolicyForm({
         <Field label={tRoot("policy.maxGuaranteeAmount")} value={maxGuarantee} onChange={setMaxGuarantee} dir="ltr" />
         <Field label={tRoot("policy.countPerYear")} value={perYear} onChange={setPerYear} dir="ltr" />
         <Field label={tRoot("policy.countLifetime")} value={lifetime} onChange={setLifetime} dir="ltr" />
+        {editing ? (
+          <div className="grid gap-2">
+            <Label htmlFor="policy-is-active">{tRoot("policy.statusLabel")}</Label>
+            <button
+              id="policy-is-active"
+              type="button"
+              onClick={() => setIsActive((current) => !current)}
+              aria-pressed={isActive}
+              className={cn(
+                "flex h-11 items-center justify-center rounded-md border px-4 text-sm outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring/50",
+                isActive
+                  ? "border-brand bg-brand-soft font-bold text-brand-deep dark:text-brand-bright"
+                  : "border-fog text-charcoal hover:bg-cloud",
+              )}
+            >
+              {isActive ? tRoot("policy.active") : tRoot("policy.paused")}
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="flex gap-2">
         <Button type="submit" disabled={save.isPending} className="h-11 rounded-md">

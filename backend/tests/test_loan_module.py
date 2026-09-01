@@ -11,6 +11,7 @@ from app.common.jalali import current_jalali_year
 from app.core.config import get_settings
 from app.core.database import Base, dispose_engine, init_engine
 from app.main import create_app
+from app.modules.audit.models import AuditLog
 from app.modules.loan.models import LoanRequest
 from app.seeds.seed_dev import run_seed
 
@@ -277,6 +278,15 @@ def test_policy_scope_purity(pg):  # type: ignore[no-untyped-def]
     seen = {item["workplace"]["id"] for item in scoped.json()["items"]}
     assert seen == {workplaces[0]["id"]}, f"scoped officer saw {seen}"
 
+    # FR-003: explicit workplace filter narrows to that unit
+    filtered = client.get(
+        f"/api/v1/loan/policies?page_size=100&workplace_id={workplaces[0]['id']}",
+        headers=_bearer(token),
+    )
+    assert filtered.status_code == 200, filtered.text
+    filtered_seen = {item["workplace"]["id"] for item in filtered.json()["items"]}
+    assert filtered_seen == {workplaces[0]["id"]}
+
 
 # --- US2: validation cascade ---
 
@@ -496,6 +506,60 @@ def test_submission_race_one_winner(pg):  # type: ignore[no-untyped-def]
 
 
 @requires_db
+def test_lifecycle_audit_rows_are_critical_and_masked(pg):  # type: ignore[no-untyped-def]
+    client, factory = pg
+    token = _admin_token(client)
+    workplace = client.get("/api/v1/org/workplaces?page_size=50", headers=_bearer(token)).json()[
+        "items"
+    ][0]
+    year = current_jalali_year()
+    _employee, _user_id, email = _create_employee_via_api(
+        client, token, workplace["id"], f"{_RUN}a1"
+    )
+    employee_token = _user_token(client, email)
+
+    _reset_policy(
+        client, token, workplace["id"], year,
+        max_request_count_per_year=10, max_request_count_lifetime=10,
+    )
+    created = _submit(client, employee_token, "loan", "20000000.00")
+    assert created.status_code == 201, created.text
+    request_id = created.json()["id"]
+    activated = client.post(
+        f"/api/v1/loan/requests/{request_id}/activate",
+        json={"version": created.json()["version"]},
+        headers=_bearer(token),
+    )
+    assert activated.status_code == 200, activated.text
+    settled = client.post(
+        f"/api/v1/loan/requests/{request_id}/settle",
+        json={"version": activated.json()["version"]},
+        headers=_bearer(token),
+    )
+    assert settled.status_code == 200, settled.text
+
+    with factory() as session:
+        actions = session.scalars(
+            select(AuditLog.action)
+            .where(
+                AuditLog.entity_type == "loan_request",
+                AuditLog.entity_id == uuid.UUID(request_id),
+            )
+            .order_by(AuditLog.created_at)
+        ).all()
+        assert actions == ["LOAN_REQUEST_CREATED", "LOAN_REQUEST_ACTIVATED", "LOAN_REQUEST_SETTLED"]
+        after_rows = session.scalars(
+            select(AuditLog.after_snapshot).where(
+                AuditLog.entity_type == "loan_request", AuditLog.entity_id == uuid.UUID(request_id)
+            )
+        ).all()
+        for snapshot in after_rows:
+            assert snapshot is not None
+            assert snapshot["amount"] == "***"
+            assert snapshot["status"] in ("pending", "active", "settled")
+
+
+@requires_db
 def test_transitions_matrix(pg):  # type: ignore[no-untyped-def]
     client, _factory = pg
     token = _admin_token(client)
@@ -674,6 +738,15 @@ def test_request_visibility_ownership_and_scope(pg):  # type: ignore[no-untyped-
     admin_view = client.get("/api/v1/loan/requests?page_size=100", headers=_bearer(token))
     admin_ids = {item["employee"]["id"] for item in admin_view.json()["items"]}
     assert {employee_a, employee_b} <= admin_ids
+
+    # FR-013: employee-name search narrows results
+    searched = client.get(
+        f"/api/v1/loan/requests?page_size=100&search=Employee {_RUN}o2",
+        headers=_bearer(token),
+    )
+    assert searched.status_code == 200, searched.text
+    searched_ids = {item["employee"]["id"] for item in searched.json()["items"]}
+    assert searched_ids == {employee_b}, f"search matched {searched_ids}"
 
     with factory() as session:
         rows = session.scalars(

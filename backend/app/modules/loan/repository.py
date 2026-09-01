@@ -129,6 +129,7 @@ def list_policies(
     context: ScopeContext,
     params: PageParams,
     *,
+    workplace_id: UUID | None = None,
     year: int | None = None,
     include_retired: bool = False,
 ) -> Page[LoanPolicyOut]:
@@ -139,6 +140,8 @@ def list_policies(
     )
     if not include_retired:
         base = base.where(LoanPolicy.deleted_at.is_(None))
+    if workplace_id is not None:
+        base = base.where(LoanPolicy.workplace_id == workplace_id)
     if year is not None:
         base = base.where(LoanPolicy.year == year)
     total = session.scalar(select(func.count()).select_from(base.subquery())) or 0
@@ -239,6 +242,7 @@ def list_requests(
     type: str | None = None,
     status: str | None = None,
     year: int | None = None,
+    search: str | None = None,
 ) -> Page[LoanRequestOut]:
     """Ownership-OR-scope visibility (research R6): the caller always sees
     requests they created; `loan:request:read` holders additionally see their
@@ -254,6 +258,16 @@ def list_requests(
         base = base.where(LoanRequest.status == status)
     if year is not None:
         base = base.where(LoanRequest.year == year)
+    if search:
+        pattern = f"%{search.strip()}%"
+        base = base.where(
+            or_(
+                Employee.first_name.ilike(pattern),
+                Employee.last_name.ilike(pattern),
+                Employee.first_name_fa.ilike(pattern),
+                Employee.last_name_fa.ilike(pattern),
+            )
+        ).join(Employee, LoanRequest.employee_id == Employee.id)
     total = session.scalar(select(func.count()).select_from(base.subquery())) or 0
     requests = session.scalars(
         base.order_by(LoanRequest.created_at.desc(), LoanRequest.id.desc())

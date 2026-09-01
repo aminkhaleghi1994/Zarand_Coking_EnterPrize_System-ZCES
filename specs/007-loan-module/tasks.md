@@ -113,3 +113,20 @@ and pagination verified.
   same locking discipline as stock decrements (research R2).
 - `amount` is masked in every loan audit snapshot (T003, research R7).
 - Commit after each phase checkpoint (Conventional Commits).
+
+## Phase 9: Convergence
+
+- [x] T021 Make all seven loan audit writes critical (in-transaction) per
+  FR-012/Constitution III (partial): write_audit(..., critical=True) for
+  LOAN_POLICY_CREATED/UPDATED/RETIRED and LOAN_REQUEST_CREATED/ACTIVATED/
+  SETTLED/CANCELLED so audit rows can never outlive a rolled-back
+  transition; test additions: audit row presence + masked amount for a
+  transition
+- [x] T022 Request listing `search` filter per FR-013/contracts (partial):
+  list_requests + GET /loan/requests accept `search` matching employee
+  first/last names (EN + FA, ilike); test additions: search narrows results
+- [x] T023 Policy listing `workplace_id` filter per FR-003/contracts
+  (partial): list_policies + GET /loan/policies accept `workplace_id`
+  (scope-filtered union); test additions: filter narrows results
+- [x] T024 PolicyForm `is_active` pause toggle per FR-002 (partial): edit
+  mode exposes active/paused with save; messages updated; lint/build green
