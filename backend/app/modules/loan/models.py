@@ -23,7 +23,6 @@ from sqlalchemy import (
     Index,
     Integer,
     Numeric,
-    String,
     Uuid,
     text,
 )

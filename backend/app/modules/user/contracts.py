@@ -129,3 +129,51 @@ def get_user_workplace_anchor(session: Session, user_id: uuid.UUID) -> Requester
         complex_id=complex_.id,
         workplace_id=workplace.id,
     )
+
+
+@dataclass(frozen=True)
+class LoanRequesterView:
+    """Identity + anchor facts the loan module needs for a signed-in user
+    (contracts-only access per constitution VI)."""
+
+    employee_id: uuid.UUID
+    display_name: str
+    first_name_fa: str | None
+    last_name_fa: str | None
+    company_id: uuid.UUID | None
+    complex_id: uuid.UUID | None
+    workplace_id: uuid.UUID
+    is_active: bool
+
+
+def get_loan_requester(session: Session, user_id: uuid.UUID) -> LoanRequesterView | None:
+    """Resolve a signed-in user to their employee record for loan requests.
+
+    Returns None when the user has no employee record or the employee has no
+    workplace (bootstrap identities cannot hold loans).
+    """
+    user = session.get(User, user_id)
+    if user is None or user.employee_id is None:
+        return None
+    employee = session.get(Employee, user.employee_id)
+    if employee is None or employee.workplace_id is None:
+        return None
+    row = session.execute(
+        select(Workplace, Complex, Company)
+        .join(Complex, Workplace.complex_id == Complex.id)
+        .join(Company, Complex.company_id == Company.id)
+        .where(Workplace.id == employee.workplace_id)
+    ).first()
+    if row is None:
+        return None
+    workplace, complex_, company = row
+    return LoanRequesterView(
+        employee_id=employee.id,
+        display_name=f"{employee.first_name} {employee.last_name}".strip(),
+        first_name_fa=employee.first_name_fa,
+        last_name_fa=employee.last_name_fa,
+        company_id=company.id,
+        complex_id=complex_.id,
+        workplace_id=workplace.id,
+        is_active=employee.is_active,
+    )
