@@ -485,6 +485,93 @@ export const assetApi = {
     ),
 };
 
+export type LoanWorkplace = { id: string; code: string; name: string; name_fa: string };
+export type LoanEmployee = { id: string; name: string; name_fa: string | null };
+
+export type LoanPolicy = {
+  id: string;
+  version: number;
+  workplace: LoanWorkplace;
+  year: number;
+  max_loan_amount: string;
+  max_guarantee_amount: string;
+  max_request_count_per_year: number;
+  max_request_count_lifetime: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type LoanRequest = {
+  id: string;
+  version: number;
+  employee: LoanEmployee;
+  workplace: LoanWorkplace;
+  type: "loan" | "guarantee";
+  amount: string;
+  year: number;
+  status: "pending" | "active" | "settled" | "cancelled";
+  settled_at: string | null;
+  created_at: string;
+};
+
+export type LoanListParams = {
+  page?: number;
+  pageSize?: number;
+  year?: number;
+  type?: "loan" | "guarantee";
+  status?: "pending" | "active" | "settled" | "cancelled" | "all";
+  includeRetired?: boolean;
+};
+
+function loanQuery(params: LoanListParams): string {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("page_size", String(params.pageSize));
+  if (params.year) query.set("year", String(params.year));
+  if (params.type) query.set("type", params.type);
+  if (params.status) query.set("status", params.status);
+  if (params.includeRetired) query.set("include_retired", "true");
+  const raw = query.toString();
+  return raw ? `?${raw}` : "";
+}
+
+export const loanApi = {
+  policies: {
+    list: (params: LoanListParams, signal?: AbortSignal) =>
+      bffFetch<Page<LoanPolicy>>(`/api/loan/policies${loanQuery(params)}`, { signal }),
+    create: (payload: unknown) =>
+      bffFetch<LoanPolicy>("/api/loan/policies", { method: "POST", body: payload }),
+    update: (id: string, payload: unknown) =>
+      bffFetch<LoanPolicy>(`/api/loan/policies/${id}`, { method: "PATCH", body: payload }),
+    retire: (id: string, version: number) =>
+      bffFetch<LoanPolicy>(`/api/loan/policies/${id}/retire`, {
+        method: "POST",
+        body: { version },
+      }),
+  },
+  requests: {
+    list: (params: LoanListParams, signal?: AbortSignal) =>
+      bffFetch<Page<LoanRequest>>(`/api/loan/requests${loanQuery(params)}`, { signal }),
+    submit: (payload: unknown) =>
+      bffFetch<LoanRequest>("/api/loan/requests", { method: "POST", body: payload }),
+    activate: (id: string, version: number) =>
+      bffFetch<LoanRequest>(`/api/loan/requests/${id}/activate`, {
+        method: "POST",
+        body: { version },
+      }),
+    settle: (id: string, version: number) =>
+      bffFetch<LoanRequest>(`/api/loan/requests/${id}/settle`, {
+        method: "POST",
+        body: { version },
+      }),
+    cancel: (id: string, version: number) =>
+      bffFetch<LoanRequest>(`/api/loan/requests/${id}/cancel`, {
+        method: "POST",
+        body: { version },
+      }),
+  },
+};
+
 export const requestApi = {
   list: (
     status: "all" | "pending" | "approved" | "rejected" | "fulfilled",

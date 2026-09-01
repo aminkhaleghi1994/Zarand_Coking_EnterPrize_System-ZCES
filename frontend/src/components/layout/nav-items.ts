@@ -32,7 +32,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "warehouse", icon: Warehouse, href: "/warehouse" },
       { key: "requests", icon: ClipboardList, href: "/requests" },
       { key: "assets", icon: MonitorSmartphone, href: "/assets" },
-      { key: "loans", icon: Banknote, phase: 7 },
+      { key: "loans", icon: Banknote, href: "/loans" },
     ],
   },
   {

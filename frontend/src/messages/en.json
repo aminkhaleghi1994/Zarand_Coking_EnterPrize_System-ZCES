@@ -465,6 +465,93 @@
       "generic": "The operation failed. Please try again."
     }
   },
+  "loans": {
+    "eyebrow": "Loans",
+    "title": "Loans & Guarantees",
+    "description": "Workplace loan policies and employee loan or guarantee requests, validated per Jalali year.",
+    "tabPolicies": "Policies",
+    "tabRequests": "Requests",
+    "filterLabel": "Loan filter",
+    "yearLabel": "Year",
+    "typeLabel": "Type filter",
+    "statusLabel": "Status filter",
+    "composePolicy": "New policy",
+    "composeRequest": "New request",
+    "empty": "Nothing in this view.",
+    "policy": {
+      "workplace": "Workplace",
+      "year": "Year",
+      "maxLoanAmount": "Max active loan",
+      "maxGuaranteeAmount": "Max active guarantee",
+      "countPerYear": "Requests / year",
+      "countLifetime": "Requests / lifetime",
+      "active": "Active",
+      "paused": "Paused",
+      "retired": "Retired",
+      "workplacePlaceholder": "Select a workplace…"
+    },
+    "request": {
+      "employee": "Employee",
+      "type": "Type",
+      "typeLoan": "Loan",
+      "typeGuarantee": "Guarantee",
+      "amount": "Amount",
+      "year": "Year",
+      "status": "Status",
+      "settledAt": "Settled"
+    },
+    "actions": {
+      "edit": "Edit",
+      "retire": "Retire",
+      "activate": "Activate",
+      "settle": "Settle",
+      "cancel": "Cancel"
+    },
+    "policyForm": {
+      "createTitle": "New loan policy",
+      "editTitle": "Edit loan policy",
+      "submit": "Create",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "loanForm": {
+      "title": "New loan request",
+      "typeLoan": "Loan",
+      "typeGuarantee": "Guarantee",
+      "amount": "Amount",
+      "amountHint": "Positive number, up to 2 decimals.",
+      "submit": "Submit",
+      "submitting": "Submitting…",
+      "cancel": "Cancel"
+    },
+    "validation": {
+      "workplaceRequired": "Pick a workplace.",
+      "yearInvalid": "Year must be a Jalali year between 1300 and 1500.",
+      "amountInvalid": "Amount must be a positive number with up to 2 decimals.",
+      "amountPositive": "Amount must be greater than zero.",
+      "countInvalid": "Counts must be zero or positive integers."
+    },
+    "rules": {
+      "lifetime_count": "Lifetime request limit reached ({used} of {limit}).",
+      "yearly_count": "This year's request limit reached ({used} of {limit}).",
+      "loan_cap": "Active loan commitment would exceed the cap ({current_active} of {limit}; requested {requested}).",
+      "guarantee_cap": "Active guarantee commitment would exceed the cap ({current_active} of {limit}; requested {requested}).",
+      "no_policy": "No active loan policy for this workplace in year {year}."
+    },
+    "errors": {
+      "DUPLICATE_RESOURCE": "An active record with these keys already exists.",
+      "BUSINESS_RULE_VIOLATION": "This action is not allowed for the current state.",
+      "VALIDATION_ERROR": "Please fix the highlighted fields and try again.",
+      "AUTHORIZATION_DENIED": "You do not have access to this operation.",
+      "STALE_VERSION": "This record changed since you opened it — refresh and retry.",
+      "CONFLICT_CONCURRENT_UPDATE": "Someone else updated this record — refresh and retry.",
+      "RESOURCE_NOT_FOUND": "The requested record was not found.",
+      "AUTHENTICATION_REQUIRED": "Please sign in first.",
+      "INTERNAL_ERROR": "Something went wrong. Please try again.",
+      "generic": "The operation failed. Please try again."
+    }
+  },
   "admin": {
     "eyebrow": "Administration",
     "title": "Access Control",
