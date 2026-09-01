@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -47,13 +46,13 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={direction} className={font.variable} suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
-        {/* Imperative injection outside React's render tree: the script is
-            written into the server HTML pre-paint and never re-created by
-            client renders (id-deduplicated), so the React 19
-            "Encountered a script tag" warning is structurally impossible. */}
-        <Script id="zces-theme-init" strategy="beforeInteractive">
-          {THEME_INIT_SCRIPT}
-        </Script>
+        {/* Server-rendered inline script: the browser executes it during the
+            initial HTML parse (pre-paint), and hydration never re-creates a
+            server-rendered node, so React 19's "Encountered a script tag"
+            client-render warning cannot fire. (next/script beforeInteractive
+            still routed the node through React's client tree — commit
+            8e55e7b's premise did not hold.) */}
+        <script id="zces-theme-init" dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <NextIntlClientProvider>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
