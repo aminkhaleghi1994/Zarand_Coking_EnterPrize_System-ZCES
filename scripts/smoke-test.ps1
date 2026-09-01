@@ -579,13 +579,13 @@ Check "loans: policy create + duplicate 409 + cascade order + lifecycle + settle
     Assert-True ($big.Status -eq 201) "loan submit failed: $($big.Status) $($big.Body)"
     $bigBody = $big.Body | ConvertFrom-Json
 
-    $over = Invoke-BffJson "POST" "/api/loan/requests" @{ type = "loan"; amount = "50000000.00" } $empHeaders
-    Assert-True ($over.Status -eq 422) "expected loan_cap 422, got $($over.Status)"
-    Assert-True ((($over.Body | ConvertFrom-Json).details.rule) -eq "loan_cap") "expected loan_cap rule"
-
     $activate = Invoke-BffJson "POST" "/api/loan/requests/$($bigBody.id)/activate" @{ version = $bigBody.version } $headers
     Assert-True ($activate.Status -eq 200) "activate failed: $($activate.Status) $($activate.Body)"
     $activated = $activate.Body | ConvertFrom-Json
+
+    $over = Invoke-BffJson "POST" "/api/loan/requests" @{ type = "loan"; amount = "50000000.00" } $empHeaders
+    Assert-True ($over.Status -eq 422) "expected loan_cap 422, got $($over.Status)"
+    Assert-True ((($over.Body | ConvertFrom-Json).details.rule) -eq "loan_cap") "expected loan_cap rule"
 
     $settle = Invoke-BffJson "POST" "/api/loan/requests/$($bigBody.id)/settle" @{ version = $activated.version } $headers
     Assert-True ($settle.Status -eq 200) "settle failed: $($settle.Status) $($settle.Body)"
