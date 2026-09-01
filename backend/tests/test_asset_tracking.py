@@ -76,7 +76,7 @@ def _bearer(token: str) -> dict[str, str]:
 def _register(client: TestClient, token: str, serial: str, **overrides: object) -> object:
     payload: dict[str, object] = {
         "name": f"Asset {_unique_tag()}",
-        "name_fa": f"Ø¯Ø§Ø±Ø§ÛŒÛŒ {_unique_tag()}",
+        "name_fa": f"دارایی {_unique_tag()}",
         "serial": serial,
     }
     payload.update(overrides)
