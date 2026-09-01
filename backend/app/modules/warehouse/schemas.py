@@ -369,3 +369,119 @@ class FulfillLineIn(BaseModel):
 class FulfillIn(BaseModel):
     version: int = Field(ge=1)
     lines: list[FulfillLineIn] = Field(min_length=1)
+
+
+# --- Assets (Phase 6) ---
+
+
+class AssetCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    name_fa: str = Field(min_length=1, max_length=200)
+    serial: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("name", "name_fa", "serial")
+    @classmethod
+    def _strip_required(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+        return stripped
+
+    @field_validator("description")
+    @classmethod
+    def _strip_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class AssetUpdateIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name_fa: str | None = Field(default=None, min_length=1, max_length=200)
+    serial: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    version: int = Field(ge=1)
+
+    @field_validator("name", "name_fa")
+    @classmethod
+    def _strip_required(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+        return stripped
+
+
+class AssetRetireIn(BaseModel):
+    version: int = Field(ge=1)
+
+
+class AssetAssignIn(BaseModel):
+    version: int = Field(ge=1)
+    target_type: str = Field(pattern="^(employee|location)$")
+    employee_id: uuid.UUID | None = None
+    location: str | None = Field(default=None, max_length=200)
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("location", "note")
+    @classmethod
+    def _strip_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class AssetReturnIn(BaseModel):
+    version: int = Field(ge=1)
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def _strip_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class EmployeeBriefOut(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class HolderOut(BaseModel):
+    type: str
+    employee: EmployeeBriefOut | None = None
+    location: str | None = None
+
+
+class AssetOut(BaseModel):
+    id: uuid.UUID
+    version: int
+    name: str
+    name_fa: str
+    serial: str
+    description: str | None = None
+    status: str
+    holder: HolderOut
+    created_at: datetime
+
+
+class HistoryHolderOut(BaseModel):
+    type: str
+    employee: EmployeeBriefOut | None = None
+    location: str | None = None
+
+
+class AssetHistoryOut(BaseModel):
+    id: uuid.UUID
+    action: str
+    from_holder: HistoryHolderOut | None = None
+    to_holder: HistoryHolderOut | None = None
+    note: str | None = None
+    actor_user_id: uuid.UUID | None = None
+    created_at: datetime

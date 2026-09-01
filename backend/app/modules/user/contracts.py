@@ -13,11 +13,46 @@ from sqlalchemy.orm import Session
 from app.modules.user.models import Company, Complex, Employee, User, Workplace
 
 __all__ = [
+    "EmployeeHolderView",
     "RequesterAnchorView",
     "WorkplaceParentsView",
+    "get_employee_holder",
     "get_user_workplace_anchor",
     "get_workplace_with_parents",
 ]
+
+
+@dataclass(frozen=True)
+class EmployeeHolderView:
+    id: uuid.UUID
+    display_name: str
+    company_id: uuid.UUID
+    complex_id: uuid.UUID
+    workplace_id: uuid.UUID
+    is_active: bool
+
+
+def get_employee_holder(session: Session, employee_id: uuid.UUID) -> EmployeeHolderView | None:
+    """Employee snapshot for asset assignment targets (or None if unknown)."""
+    row = session.execute(
+        select(Employee, Workplace, Complex, Company)
+        .join(Workplace, Employee.workplace_id == Workplace.id)
+        .join(Complex, Workplace.complex_id == Complex.id)
+        .join(Company, Complex.company_id == Company.id)
+        .where(Employee.id == employee_id)
+    ).first()
+    if row is None:
+        return None
+    employee, workplace, complex_, company = row
+    display_name = f"{employee.first_name} {employee.last_name}".strip()
+    return EmployeeHolderView(
+        id=employee.id,
+        display_name=display_name,
+        company_id=company.id,
+        complex_id=complex_.id,
+        workplace_id=workplace.id,
+        is_active=employee.deleted_at is None and employee.is_active,
+    )
 
 
 @dataclass(frozen=True)

@@ -73,6 +73,12 @@ BASE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("warehouse:request:read", "View item requests", "مشاهده درخواست‌های کالا"),
     ("warehouse:request:decide", "Approve or reject item requests", "تأیید یا رد درخواست‌های کالا"),
     ("warehouse:request:fulfill", "Fulfill item requests", "انجام درخواست‌های کالا"),
+    ("warehouse:asset:create", "Create assets", "ایجاد دارایی"),
+    ("warehouse:asset:read", "View assets", "مشاهده دارایی‌ها"),
+    ("warehouse:asset:update", "Update assets", "ویرایش دارایی‌ها"),
+    ("warehouse:asset:retire", "Retire assets", "بازنشسته‌کردن دارایی‌ها"),
+    ("warehouse:asset:assign", "Assign assets", "تخصیص دارایی"),
+    ("warehouse:asset:return", "Return assets", "بازگرداندن دارایی"),
 ]
 
 BASE_ROLES: list[str] = [
@@ -105,6 +111,12 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "warehouse:alert:read",
         "warehouse:request:read",
         "warehouse:request:fulfill",
+        "warehouse:asset:create",
+        "warehouse:asset:read",
+        "warehouse:asset:update",
+        "warehouse:asset:retire",
+        "warehouse:asset:assign",
+        "warehouse:asset:return",
     ],
     "WarehouseApprover": [
         "warehouse:item:read",
@@ -114,6 +126,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "warehouse:alert:read",
         "warehouse:request:read",
         "warehouse:request:decide",
+        "warehouse:asset:read",
     ],
 }
 
