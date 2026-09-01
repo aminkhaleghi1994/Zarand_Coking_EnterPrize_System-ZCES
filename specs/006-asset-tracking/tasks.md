@@ -72,13 +72,13 @@ CP1; timelines show all lifecycle entries in order.
 
 ## Phase 7: US5 — Bilingual assets console (P2)
 
-- [ ] T013 [US5] BFF: `frontend/src/app/api/warehouse/assets/**` routes (list/create/detail/patch/retire/assign/return/history); `lib/client-api.ts` `assetApi` + types; `messages/{en,fa}.json` `assets.*` namespace; `nav-items.ts` assets href (FR-012, constitution V)
-- [ ] T014 [US5] UI: `frontend/src/app/[locale]/(app)/assets/page.tsx` + `features/assets/AssetsView.tsx` (filter chips, search, table→cards) + `AssetForm.tsx` (create/edit, serial immutable in edit) + `AssignDialog.tsx` (employee/location toggle, employee picker from the scoped directory API) + `HistoryDrawer.tsx` (timeline newest-first, Jalali in `fa`); return/retire confirmations; skeletons + reduced motion (FR-012, SC-006, research R11)
+- [x] T013 [US5] BFF: `frontend/src/app/api/warehouse/assets/**` routes (list/create/detail/patch/retire/assign/return/history); `lib/client-api.ts` `assetApi` + types; `messages/{en,fa}.json` `assets.*` namespace; `nav-items.ts` assets href (FR-012, constitution V)
+- [x] T014 [US5] UI: `frontend/src/app/[locale]/(app)/assets/page.tsx` + `features/assets/AssetsView.tsx` (filter chips, search, table→cards) + `AssetForm.tsx` (create/edit, serial immutable in edit) + `AssignDialog.tsx` (employee/location toggle, employee picker from the scoped directory API) + `HistoryDrawer.tsx` (timeline newest-first, Jalali in `fa`); return/retire confirmations; skeletons + reduced motion (FR-012, SC-006, research R11)
 
 ## Phase 8: Polish & Convergence
 
-- [ ] T015 [P] [POL] `scripts/smoke-test.ps1`: asset E2E section — register → duplicate 409 → assign employee → history 2 entries → return → retire blocked→allowed after return → serial reuse (SC-001..SC-004)
-- [ ] T016 [POL] CHANGELOG 0.6.0 entry + VERSION bump + README assets section (module map, permissions, holder model)
+- [x] T015 [P] [POL] `scripts/smoke-test.ps1`: asset E2E section — register → duplicate 409 → assign employee → history 2 entries → return → retire blocked→allowed after return → serial reuse (SC-001..SC-004)
+- [x] T016 [POL] CHANGELOG 0.6.0 entry + VERSION bump + README assets section (module map, permissions, holder model)
 - [ ] T017 [POL] Full gate: backend ruff/mypy/pytest, frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
 
 ---

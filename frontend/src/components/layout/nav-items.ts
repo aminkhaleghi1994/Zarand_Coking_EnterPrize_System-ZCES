@@ -31,7 +31,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "employees", icon: Users, href: "/employees" },
       { key: "warehouse", icon: Warehouse, href: "/warehouse" },
       { key: "requests", icon: ClipboardList, href: "/requests" },
-      { key: "assets", icon: MonitorSmartphone, phase: 6 },
+      { key: "assets", icon: MonitorSmartphone, href: "/assets" },
       { key: "loans", icon: Banknote, phase: 7 },
     ],
   },

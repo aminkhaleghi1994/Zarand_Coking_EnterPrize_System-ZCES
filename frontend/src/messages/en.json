@@ -357,6 +357,112 @@
       "generic": "The operation failed. Please try again."
     }
   },
+  "assets": {
+    "eyebrow": "Assets",
+    "title": "Asset Tracking",
+    "description": "Register assets, assign them to employees or locations, and follow their history.",
+    "filterLabel": "Asset status filter",
+    "searchLabel": "Search assets",
+    "searchPlaceholder": "Search by name or serial…",
+    "compose": "New asset",
+    "empty": "No assets in this view.",
+    "status": {
+      "all": "All",
+      "available": "Available",
+      "assigned": "Assigned",
+      "retired": "Retired"
+    },
+    "holder": {
+      "available": "Available",
+      "employee": "Employee",
+      "location": "Location"
+    },
+    "table": {
+      "asset": "Asset",
+      "serial": "Serial",
+      "status": "Status",
+      "holder": "Holder",
+      "actions": "Actions"
+    },
+    "assign": {
+      "title": "Assign asset",
+      "targetType": "Assign to",
+      "targetEmployee": "Employee",
+      "targetLocation": "Location",
+      "employeePlaceholder": "Select an employee…",
+      "employeeSearchLabel": "Filter employees",
+      "location": "Location",
+      "locationPlaceholder": "e.g. Warehouse 2, shelf A1",
+      "note": "Note (optional)",
+      "submit": "Assign",
+      "submitting": "Assigning…",
+      "cancel": "Cancel"
+    },
+    "returnAction": {
+      "title": "Return asset",
+      "note": "Note (optional)",
+      "submit": "Return",
+      "submitting": "Returning…",
+      "cancel": "Cancel"
+    },
+    "retire": {
+      "title": "Retire asset",
+      "description": "The asset is removed from the active list but its history is kept. This cannot be undone from this screen.",
+      "submit": "Retire",
+      "submitting": "Retiring…",
+      "cancel": "Cancel"
+    },
+    "history": {
+      "title": "History",
+      "empty": "No history entries yet.",
+      "from": "From",
+      "to": "To",
+      "note": "Note",
+      "action": {
+        "created": "Registered",
+        "updated": "Updated",
+        "assigned": "Assigned",
+        "returned": "Returned",
+        "retired": "Retired"
+      }
+    },
+    "form": {
+      "createTitle": "Register asset",
+      "editTitle": "Edit asset",
+      "name": "Name (English)",
+      "nameFa": "Name (Persian)",
+      "serial": "Serial",
+      "serialHint": "Serial cannot be changed after registration.",
+      "description": "Description (optional)",
+      "edit": "Edit",
+      "submit": "Register",
+      "submitting": "Registering…",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "validation": {
+      "nameRequired": "Name is required (max 200 characters).",
+      "nameFaRequired": "Persian name is required (max 200 characters).",
+      "serialRequired": "Serial is required (max 100 characters).",
+      "descriptionTooLong": "Description must be at most 1000 characters.",
+      "employeeRequired": "Pick an employee to assign.",
+      "locationRequired": "Enter a location to assign.",
+      "noteTooLong": "Note must be at most 500 characters."
+    },
+    "errors": {
+      "DUPLICATE_RESOURCE": "An active asset with this serial already exists.",
+      "BUSINESS_RULE_VIOLATION": "This action is not allowed for the asset's current state.",
+      "VALIDATION_ERROR": "Please fix the highlighted fields and try again.",
+      "AUTHORIZATION_DENIED": "You do not have access to this operation.",
+      "STALE_VERSION": "This asset changed since you opened it — refresh and retry.",
+      "CONFLICT_CONCURRENT_UPDATE": "Someone else updated this asset — refresh and retry.",
+      "RESOURCE_NOT_FOUND": "The requested asset was not found.",
+      "AUTHENTICATION_REQUIRED": "Please sign in first.",
+      "INTERNAL_ERROR": "Something went wrong. Please try again.",
+      "generic": "The operation failed. Please try again."
+    }
+  },
   "admin": {
     "eyebrow": "Administration",
     "title": "Access Control",

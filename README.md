@@ -16,11 +16,36 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 5 complete (Item Request Flow)** — on top of the Phase 1–4
+**Phase 6 complete (Asset Tracking)** — on top of the Phase 1–5
 foundation (platform, auth/RBAC/scopes, org & employees, warehouse catalog
-and inventory): self-service item requests, WarehouseApprover decisions and
-keeper fulfillment that draws stock atomically through the movement ledger.
-Phases 6–11 run sequentially; next: `asset-tracking`.
+and inventory, item requests): asset instances with duplicate-proof serials,
+typed assignment to employees or locations, version-guarded returns and
+audited retirement with append-only lifecycle history. Phases 7–11 run
+sequentially; next: `loan-module`.
+
+## Asset tracking (Phase 6)
+
+**Module map**: `backend/app/modules/warehouse/asset_repository.py` +
+`asset_service.py` (assets are warehouse-domain data) ·
+`frontend/src/features/assets/` + `app/api/warehouse/assets/**` (BFF) ·
+migration `0006_asset_tracking`.
+
+**Holder model**: an asset is `available` → `assigned` (to an active
+employee in scope, or a free-text location) → optionally `returned` →
+eventually `retired` (soft delete; blocked while assigned). Retirement frees
+the serial for reuse. Every transition appends an `AssetHistory` row
+(append-only, from/to holder captured) and an audit record
+(`ASSET_CREATED/UPDATED/ASSIGNED/RETURNED/RETIRED`).
+
+**Integrity**: serials are normalized and unique among active assets
+(case/whitespace-proof partial unique index — reuse only after retirement);
+holder-state consistency is enforced by a DB CHECK plus the service state
+machine; concurrent assign/return races resolve to exactly one winner via
+optimistic locking (`STALE_VERSION` on stale writes).
+
+**Permissions** (seeded idempotently; `WarehouseKeeper` has all six,
+`WarehouseApprover` has `read`): `warehouse:asset:create` `read` `update`
+`retire` `assign` `return`.
 
 ## Item request flow (Phase 5)
 

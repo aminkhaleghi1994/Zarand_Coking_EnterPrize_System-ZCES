@@ -392,6 +392,96 @@ export const warehouseApi = {
   me: (signal?: AbortSignal) => bffFetch<MePayload>("/api/auth/me", { signal }),
 };
 
+export type AssetHolder = {
+  type: "available" | "employee" | "location";
+  employee?: { id: string; name: string } | null;
+  location?: string | null;
+};
+
+export type AssetRecord = {
+  id: string;
+  version: number;
+  name: string;
+  name_fa: string;
+  serial: string;
+  description: string | null;
+  status: "available" | "assigned" | "retired";
+  holder: AssetHolder;
+  created_at: string;
+};
+
+export type HistoryHolder = {
+  type: "available" | "employee" | "location";
+  employee?: { id: string; name: string } | null;
+  location?: string | null;
+};
+
+export type AssetHistoryEntry = {
+  id: string;
+  action: "created" | "updated" | "assigned" | "returned" | "retired";
+  from_holder: HistoryHolder | null;
+  to_holder: HistoryHolder | null;
+  note: string | null;
+  actor_user_id: string | null;
+  created_at: string;
+};
+
+export type AssetListParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: "available" | "assigned" | "retired" | "all";
+};
+
+function assetQuery(params: AssetListParams): string {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("page_size", String(params.pageSize));
+  if (params.search) query.set("search", params.search);
+  if (params.status) query.set("status", params.status);
+  const raw = query.toString();
+  return raw ? `?${raw}` : "";
+}
+
+export const assetApi = {
+  list: (params: AssetListParams, signal?: AbortSignal) =>
+    bffFetch<Page<AssetRecord>>(`/api/warehouse/assets${assetQuery(params)}`, { signal }),
+  get: (id: string, signal?: AbortSignal) =>
+    bffFetch<AssetRecord>(`/api/warehouse/assets/${id}`, { signal }),
+  create: (payload: unknown) =>
+    bffFetch<AssetRecord>("/api/warehouse/assets", { method: "POST", body: payload }),
+  update: (id: string, payload: unknown) =>
+    bffFetch<AssetRecord>(`/api/warehouse/assets/${id}`, { method: "PATCH", body: payload }),
+  retire: (id: string, version: number) =>
+    bffFetch<AssetRecord>(`/api/warehouse/assets/${id}/retire`, {
+      method: "POST",
+      body: { version },
+    }),
+  assign: (
+    id: string,
+    payload: {
+      version: number;
+      target_type: "employee" | "location";
+      employee_id?: string | null;
+      location?: string | null;
+      note?: string | null;
+    },
+  ) =>
+    bffFetch<AssetRecord>(`/api/warehouse/assets/${id}/assign`, {
+      method: "POST",
+      body: payload,
+    }),
+  returnAsset: (id: string, version: number, note?: string | null) =>
+    bffFetch<AssetRecord>(`/api/warehouse/assets/${id}/return`, {
+      method: "POST",
+      body: { version, note: note || null },
+    }),
+  history: (id: string, signal?: AbortSignal) =>
+    bffFetch<Page<AssetHistoryEntry>>(`/api/warehouse/assets/${id}/history?page_size=100`, {
+      signal,
+    }),
+};
+
 export const requestApi = {
   list: (
     status: "all" | "pending" | "approved" | "rejected" | "fulfilled",
