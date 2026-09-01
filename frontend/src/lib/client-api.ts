@@ -476,10 +476,13 @@ export const assetApi = {
       method: "POST",
       body: { version, note: note || null },
     }),
-  history: (id: string, signal?: AbortSignal) =>
-    bffFetch<Page<AssetHistoryEntry>>(`/api/warehouse/assets/${id}/history?page_size=100`, {
-      signal,
-    }),
+  history: (id: string, page?: number, signal?: AbortSignal) =>
+    bffFetch<Page<AssetHistoryEntry>>(
+      `/api/warehouse/assets/${id}/history?page=${page ?? 1}&page_size=100`,
+      {
+        signal,
+      },
+    ),
 };
 
 export const requestApi = {

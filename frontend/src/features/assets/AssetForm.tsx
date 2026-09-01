@@ -27,6 +27,7 @@ type CreatePayload = {
 type EditPayload = {
   name: string;
   name_fa: string;
+  serial: string;
   description: string | null;
   version: number;
 };
@@ -68,6 +69,7 @@ export function AssetForm({ asset, onCancel, onSaved }: AssetFormProps) {
       ? {
           name: parsed.data.name,
           name_fa: parsed.data.name_fa,
+          serial: parsed.data.serial,
           description: parsed.data.description ?? null,
           version: asset!.version,
         }
@@ -125,15 +127,12 @@ export function AssetForm({ asset, onCancel, onSaved }: AssetFormProps) {
           dir="ltr"
           value={serial}
           onChange={(event) => setSerial(event.target.value)}
-          disabled={editing}
-          aria-describedby={editing ? "asset-serial-hint" : undefined}
-          className="h-11 rounded-md disabled:cursor-not-allowed disabled:bg-cloud disabled:text-graphite"
+          aria-describedby="asset-serial-hint"
+          className="h-11 rounded-md"
         />
-        {editing ? (
-          <p id="asset-serial-hint" className="text-xs text-graphite">
-            {t("serialHint")}
-          </p>
-        ) : null}
+        <p id="asset-serial-hint" className="text-xs text-graphite">
+          {t("serialHint")}
+        </p>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="asset-description">{t("description")}</Label>

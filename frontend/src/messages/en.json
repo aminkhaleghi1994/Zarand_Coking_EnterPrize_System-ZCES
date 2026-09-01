@@ -415,6 +415,8 @@
     "history": {
       "title": "History",
       "empty": "No history entries yet.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
       "from": "From",
       "to": "To",
       "note": "Note",
@@ -432,7 +434,7 @@
       "name": "Name (English)",
       "nameFa": "Name (Persian)",
       "serial": "Serial",
-      "serialHint": "Serial cannot be changed after registration.",
+      "serialHint": "The serial must stay unique among active assets.",
       "description": "Description (optional)",
       "edit": "Edit",
       "submit": "Register",

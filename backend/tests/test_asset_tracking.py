@@ -209,7 +209,7 @@ def test_register_and_duplicate_serial_variants(pg):  # type: ignore[no-untyped-
 
 
 @requires_db
-def test_update_and_serial_immutable(pg):  # type: ignore[no-untyped-def]
+def test_update_and_serial_editable(pg):  # type: ignore[no-untyped-def]
     client, _factory = pg
     token = _admin_token(client)
     serial = f"TW-{_unique_tag()}"
@@ -230,12 +230,43 @@ def test_update_and_serial_immutable(pg):  # type: ignore[no-untyped-def]
     )
     assert updated.status_code == 200, updated.text
 
+    # serial edit to a free serial succeeds (FR-003); stored value is stripped
+    new_serial = f"TW-{_unique_tag()}-R"
     serial_change = client.patch(
         f"/api/v1/warehouse/assets/{created['id']}",
-        json={"serial": "HACK-1", "version": updated.json()["version"]},
+        json={"serial": f"  {new_serial}  ", "version": updated.json()["version"]},
         headers=_bearer(token),
     )
-    assert serial_change.status_code == 422
+    assert serial_change.status_code == 200, serial_change.text
+    assert serial_change.json()["serial"] == new_serial
+
+    # case/whitespace-normalized: editing to the same normalized serial is a no-op
+    same = client.patch(
+        f"/api/v1/warehouse/assets/{created['id']}",
+        json={"serial": new_serial.upper(), "version": serial_change.json()["version"]},
+        headers=_bearer(token),
+    )
+    assert same.status_code == 200, same.text
+
+    # collision with another active asset is refused (FR-002)
+    other = _register(client, token, f"TW-{_unique_tag()}").json()
+    collision = client.patch(
+        f"/api/v1/warehouse/assets/{created['id']}",
+        json={"serial": other["serial"], "version": same.json()["version"]},
+        headers=_bearer(token),
+    )
+    assert collision.status_code == 409
+    assert collision.json()["code"] == "DUPLICATE_RESOURCE"
+
+    # a freed serial can be taken again: retire, then register the same serial
+    retired = client.post(
+        f"/api/v1/warehouse/assets/{created['id']}/retire",
+        json={"version": same.json()["version"]},
+        headers=_bearer(token),
+    )
+    assert retired.status_code == 200, retired.text
+    reuse = _register(client, token, new_serial)
+    assert reuse.status_code == 201, reuse.text
 
 
 @requires_db

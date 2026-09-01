@@ -79,7 +79,24 @@ CP1; timelines show all lifecycle entries in order.
 
 - [x] T015 [P] [POL] `scripts/smoke-test.ps1`: asset E2E section — register → duplicate 409 → assign employee → history 2 entries → return → retire blocked→allowed after return → serial reuse (SC-001..SC-004)
 - [x] T016 [POL] CHANGELOG 0.6.0 entry + VERSION bump + README assets section (module map, permissions, holder model)
-- [ ] T017 [POL] Full gate: backend ruff/mypy/pytest, frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
+- [x] T017 [POL] Full gate: backend ruff/mypy/pytest, frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
+
+## Phase 9: Convergence
+
+- [x] T018 Make asset serial editable per FR-003 (contradicts): `update_asset`
+  accepts serial changes — normalize, refuse if the new serial_norm collides
+  with another active asset (DUPLICATE_RESOURCE), keep stale-version guard,
+  audit ASSET_UPDATED with before/after serials; enable the serial field in
+  `AssetForm` edit mode (serialHint updated), duplicate error surfaced;
+  test additions: serial edit happy path, collision refusal, serial-reuse
+  interplay with retirement
+- [x] T019 Add `backend/tests/test_asset_schemas.py` schema fixture tests per
+  task T002 (missing): AssetCreateIn/AssetUpdateIn validation (blank/strip,
+  max lengths, version >= 1), AssetAssignIn target-type + variant rules,
+  AssetReturnIn, AssetHistoryOut shapes
+- [x] T020 HistoryDrawer pagination per FR-010/SC-004 (partial): fetch pages
+  with a "load more" control so timelines beyond 100 entries stay complete
+  newest-first; Jalali rendering unchanged
 
 ---
 

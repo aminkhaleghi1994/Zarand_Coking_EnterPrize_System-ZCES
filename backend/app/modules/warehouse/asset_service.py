@@ -179,7 +179,13 @@ def update_asset(
         and updates["serial"] is not None
         and updates["serial"].strip().lower() != asset.serial_norm
     ):
-        raise validation_error("Serial numbers are immutable after creation")
+        new_serial = updates["serial"].strip()
+        new_norm = new_serial.lower()
+        conflicting = asset_repository.get_asset_by_serial_norm(session, new_norm)
+        if conflicting is not None and conflicting.id != asset.id:
+            raise duplicate_resource("An active asset with this serial already exists")
+        asset.serial = new_serial
+        asset.serial_norm = new_norm
     if "name" in updates and updates["name"] is not None:
         asset.name = updates["name"].strip()
     if "name_fa" in updates and updates["name_fa"] is not None:
