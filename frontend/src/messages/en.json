@@ -478,6 +478,13 @@
     "composePolicy": "New policy",
     "composeRequest": "New request",
     "empty": "Nothing in this view.",
+    "status": {
+      "all": "All",
+      "pending": "Pending",
+      "active": "Active",
+      "settled": "Settled",
+      "cancelled": "Cancelled"
+    },
     "policy": {
       "workplace": "Workplace",
       "year": "Year",

@@ -478,6 +478,13 @@
     "composePolicy": "سیاست جدید",
     "composeRequest": "درخواست جدید",
     "empty": "موردی در این نما وجود ندارد.",
+    "status": {
+      "all": "همه",
+      "pending": "در انتظار",
+      "active": "فعال",
+      "settled": "تسویه‌شده",
+      "cancelled": "لغوشده"
+    },
     "policy": {
       "workplace": "محل کار",
       "year": "سال",
