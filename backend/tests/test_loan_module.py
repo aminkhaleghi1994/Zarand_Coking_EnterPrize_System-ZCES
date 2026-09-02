@@ -234,10 +234,20 @@ def test_policy_crud_matrix(pg):  # type: ignore[no-untyped-def]
     )
     assert retired.status_code == 200, retired.text
 
-    listed = client.get("/api/v1/loan/policies?page_size=100", headers=_bearer(token)).json()
+    listed = client.get(
+        f"/api/v1/loan/policies?page_size=100&workplace_id={workplace['id']}",
+        headers=_bearer(token),
+    ).json()
     assert all(item["id"] != policy["id"] for item in listed["items"])
     retired_listed = client.get(
-        "/api/v1/loan/policies?page_size=100&include_retired=true", headers=_bearer(token)
+        "/api/v1/loan/policies",
+        params={
+            "page_size": 100,
+            "workplace_id": workplace["id"],
+            "year": year - 1,
+            "include_retired": "true",
+        },
+        headers=_bearer(token),
     ).json()
     assert any(item["id"] == policy["id"] for item in retired_listed["items"])
 

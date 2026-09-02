@@ -6,7 +6,6 @@ notification rows in the same transaction (§20 + research R4)."""
 import uuid
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.tracing import get_trace_id
@@ -62,23 +61,3 @@ def deliver_critical(
 
 def event_is_critical(event_type: str) -> bool:
     return event_type in CRITICAL_EVENTS
-
-
-def _collect_payload_ids(payload: dict[str, Any]) -> list[uuid.UUID]:
-    ids: list[uuid.UUID] = []
-    for key in ("entity_id", "workplace_id"):
-        raw = payload.get(key)
-        if raw:
-            ids.append(uuid.UUID(str(raw)))
-    return ids
-
-
-def find_pending_events(session: Session, limit: int) -> list[EventOutbox]:
-    return list(
-        session.scalars(
-            select(EventOutbox)
-            .where(EventOutbox.status.in_(("pending", "processing")))
-            .order_by(EventOutbox.created_at)
-            .limit(limit)
-        ).all()
-    )

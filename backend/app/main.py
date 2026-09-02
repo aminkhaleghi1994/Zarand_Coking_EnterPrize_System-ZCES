@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.common.bus import bus
 from app.common.schemas import HealthStatus
 from app.core.config import Settings, get_settings
 from app.core.database import check_database_health, dispose_engine, get_engine, init_engine
@@ -15,6 +17,7 @@ from app.core.logging import setup_logging
 from app.core.tracing import new_trace_id, set_trace_id
 from app.modules.audit.router import router as audit_router
 from app.modules.loan.router import router as loan_router
+from app.modules.notification.relay import start_relay, stop_relay
 from app.modules.user.router import admin_router as user_admin_router
 from app.modules.user.router import router as user_router
 from app.modules.warehouse.router import router as warehouse_router
@@ -36,7 +39,10 @@ class TraceMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     init_engine(settings)
+    bus.attach_loop(asyncio.get_running_loop())
+    relay = start_relay()
     yield
+    stop_relay(relay)
     dispose_engine()
 
 

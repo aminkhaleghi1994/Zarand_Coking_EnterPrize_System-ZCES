@@ -32,6 +32,7 @@ __all__ = [
     "get_user_id_for_employee",
     "get_user_workplace_anchor",
     "get_workplace_with_parents",
+    "filter_active_user_ids",
 ]
 
 
@@ -197,6 +198,21 @@ def get_user_id_for_employee(session: Session, employee_id: uuid.UUID) -> uuid.U
     the employee has no user account (never the case for created pairs, but
     guards against partial data)."""
     return session.scalar(select(User.id).where(User.employee_id == employee_id))
+
+
+def filter_active_user_ids(
+    session: Session, user_ids: list[uuid.UUID]
+) -> list[uuid.UUID]:
+    """The subset of the given ids whose accounts are active (delivery-time
+    skip rule for deactivated recipients, spec edge case 2)."""
+    if not user_ids:
+        return []
+    rows = session.execute(
+        select(User.id).where(
+            User.id.in_(user_ids), User.is_active.is_(True), User.deleted_at.is_(None)
+        )
+    ).all()
+    return [row[0] for row in rows]
 
 
 def get_recipient_user_ids(

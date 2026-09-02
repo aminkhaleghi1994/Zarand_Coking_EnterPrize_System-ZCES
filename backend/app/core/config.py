@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     INITIAL_ADMIN_USERNAME: str | None = None
     INITIAL_ADMIN_PASSWORD: str | None = Field(default=None, repr=False)
 
+    RELAY_ENABLED: bool = True
+    RELAY_POLL_SECONDS: float = 2.0
+    RELAY_BATCH_SIZE: int = Field(default=50, ge=1, le=500)
+
     @model_validator(mode="after")
     def _validate_jwt_config(self) -> "Settings":
         if len(self.JWT_SECRET_KEY) < 16:
@@ -97,6 +101,12 @@ class Settings(BaseSettings):
                 f"LOG_LEVEL must be one of {sorted(_VALID_LOG_LEVELS)}, got an invalid value"
             )
         self.LOG_LEVEL = level
+        return self
+
+    @model_validator(mode="after")
+    def _validate_relay_config(self) -> "Settings":
+        if self.RELAY_POLL_SECONDS <= 0:
+            raise SettingsValidationError("RELAY_POLL_SECONDS must be greater than 0")
         return self
 
     @property
