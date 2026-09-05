@@ -63,8 +63,8 @@
 
 ## Phase 7: Polish & Convergence
 
-- [ ] T021 [P] [POL] `scripts/smoke-test.ps1`: settings section (PATCH + version bump + audit row + stale rejection) + reports section (dashboard counters > 0 as admin, inventory/requests/loans/audit pages 200 + scoped, export returns xlsx magic bytes + filename, masked user export contains no raw national id); `scripts/smoke-ui.ps1`: dashboard + reports + settings render checks
-- [ ] T022 [POL] CHANGELOG 0.9.0 entry + VERSION bump + README settings/reports section (module map, permissions, export model, feature flags)
+- [x] T021 [P] [POL] `scripts/smoke-test.ps1`: settings section (PATCH + version bump + audit row + stale rejection) + reports section (dashboard counters > 0 as admin, inventory/requests/loans/audit pages 200 + scoped, export returns xlsx magic bytes + filename, masked user export contains no raw national id); `scripts/smoke-ui.ps1`: dashboard + reports + settings render checks
+- [x] T022 [POL] CHANGELOG 0.9.0 entry + VERSION bump + README settings/reports section (module map, permissions, export model, feature flags)
 - [ ] T023 [POL] Full gate: backend ruff/mypy/pytest (scratch DB), frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-test.ps1` + `scripts/smoke-ui.ps1` green, commit + push; CI green
 
 ---

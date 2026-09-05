@@ -16,13 +16,51 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 8 complete (Notifications, Event Outbox & Live SSE)** — on top of
-the Phase 1–7 foundation (platform, auth/RBAC/scopes, org & employees,
-warehouse catalog and inventory, item requests, asset tracking, loans):
-in-transaction event capture for all 13 §20 event types, an outbox relay
-with exactly-once per-recipient delivery, a live per-user SSE stream, and
-a bilingual inbox UI with a live unread badge. Phases 9–11 run
-sequentially; next: `settings-reports-dashboard`.
+**Phase 9 complete (Settings, Reports & Management Dashboard)** — on top
+of the Phase 1–8 foundation (platform, auth/RBAC/scopes, org &
+employees, warehouse, item requests, assets, loans, notifications):
+audited global settings with feature flags, a scope-filtered management
+dashboard, four operational reports, and permission-aware masked Excel
+exports. Phases 10–11 run sequentially; next:
+`hardening-observability`.
+
+## Settings, reports & dashboard (Phase 9)
+
+**Module map**: `backend/app/modules/settings/` (models, defaults,
+schemas, repository, service, router, contracts) ·
+`backend/app/modules/reports/` (schemas, service, excel, router — owns
+no storage; consumes module contracts) · `frontend/src/features/
+{settings,reports,dashboard}/` + `app/api/{settings,reports}/**` (BFF
+incl. binary export passthrough) · migration `0009_settings`.
+
+**Settings**: a global typed key/value store with a fixed code-defined
+key set (low-stock alerting, notification recipients, request approval
+policy, dashboard defaults, feature flags). Updates validate the typed
+value, guard the version (`STALE_VERSION` on stale writes), and write a
+`SETTING_UPDATED` audit row with before/after snapshots in the same
+transaction. Contract reads fall back to code defaults — a missing row
+never breaks a consumer.
+
+**Dashboard & reports**: every number and row is scope-filtered by the
+owning module's filter via published contracts (constitution II + VI) —
+a Workplace-scoped manager sees workplace-bounded data. The dashboard
+composes counters + by-status breakdowns; the reports cover inventory,
+item requests (with status counts over the filtered set), loans
+(per-workplace Jalali-year aggregates), and the sensitive-operations
+audit report (snapshots visible only with `audit:log:read_full`).
+
+**Excel export**: `GET /reports/export/excel` (permission
+`reports:export:excel` + the target report's read permission) exports
+the current filtered page via openpyxl — the same scope + masking rules
+as the JSON endpoints (masked values written masked, never raw), bilingual
+headers per locale, `fa` workbooks RTL with Jalali dates, and RFC 5987
+Persian filenames. The BFF streams the workbook through a binary
+passthrough forwarding the session cookie.
+
+**Feature flags**: `flags.loan_module_enabled` /
+`flags.asset_module_enabled` (plain settings) toggle module nav
+visibility without restarts; the dashboard breakdown cards honor
+`dashboard.show_*`.
 
 ## Notifications (Phase 8)
 
