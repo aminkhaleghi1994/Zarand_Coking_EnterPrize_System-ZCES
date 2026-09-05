@@ -715,6 +715,123 @@ Check "notifications: relay delivers non-critical event within latency" {
     $null = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
 }
 
+# --- Settings & reports flow (Phase 9, T021) ---
+
+Check "settings: PATCH applies, version bumps, audit row exists, stale rejected" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $cookieHeaders = @{ Cookie = Get-CookiesFromJar $script:jar }
+
+    $listed = Invoke-BffJson "GET" "/api/settings" $null $cookieHeaders
+    Assert-True ($listed.Status -eq 200) "settings list failed: $($listed.Status)"
+    $settings = $listed.Body | ConvertFrom-Json
+    Assert-True ($settings.total -ge 8) "expected >= 8 seeded settings, got $($settings.total)"
+    $target = $settings.items | Where-Object { $_.key -eq "requests.approval_require_note" } | Select-Object -First 1
+    Assert-True ($null -ne $target) "requests.approval_require_note not seeded"
+
+    $patched = Invoke-BffJson "PATCH" "/api/settings/requests.approval_require_note" @{
+        value = $false; version = $target.version
+    } $headers
+    Assert-True ($patched.Status -eq 200) "settings PATCH failed: $($patched.Status) $($patched.Body)"
+    $updated = $patched.Body | ConvertFrom-Json
+    Assert-True ($updated.value -eq $false) "value not applied"
+    Assert-True ($updated.version -eq ($target.version + 1)) "version not bumped"
+
+    $stale = Invoke-BffJson "PATCH" "/api/settings/requests.approval_require_note" @{
+        value = $true; version = $target.version
+    } $headers
+    Assert-True ($stale.Status -eq 409) "expected stale 409, got $($stale.Status)"
+    Assert-True (($stale.Body | ConvertFrom-Json).code -eq "STALE_VERSION") "expected STALE_VERSION"
+
+    # restore (fresh version)
+    $null = Invoke-BffJson "PATCH" "/api/settings/requests.approval_require_note" @{
+        value = $true; version = $updated.version
+    } $headers
+
+    # audit row for the change
+    $audit = Invoke-BffJson "GET" "/api/reports/audit?action=SETTING_UPDATED&page_size=10" $null $cookieHeaders
+    Assert-True ($audit.Status -eq 200) "audit report failed: $($audit.Status)"
+    $auditRows = ($audit.Body | ConvertFrom-Json).items
+    Assert-True (@($auditRows).Count -ge 1) "no SETTING_UPDATED audit rows"
+}
+
+Check "reports: dashboard counters + inventory/requests/loans/audit pages" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $cookieHeaders = @{ Cookie = Get-CookiesFromJar $script:jar }
+
+    $dashboard = Invoke-BffJson "GET" "/api/reports/dashboard" $null $cookieHeaders
+    Assert-True ($dashboard.Status -eq 200) "dashboard failed: $($dashboard.Status)"
+    $counters = ($dashboard.Body | ConvertFrom-Json).counters
+    Assert-True ($null -ne $counters.active_employees) "active_employees counter missing"
+
+    foreach ($path in @("/api/reports/inventory", "/api/reports/requests", "/api/reports/loans", "/api/reports/audit")) {
+        $page = Invoke-BffJson "GET" $path $null $cookieHeaders
+        Assert-True ($page.Status -eq 200) "$path failed: $($page.Status)"
+    }
+    $requests = (Invoke-BffJson "GET" "/api/reports/requests" $null $cookieHeaders).Body | ConvertFrom-Json
+    Assert-True ($null -ne $requests.status_counts) "status_counts missing from requests report"
+}
+
+Check "reports: Excel export returns workbook bytes + filename" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $cookieHeaders = @{ Cookie = Get-CookiesFromJar $script:jar }
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+
+    # create stock so the inventory export has a row
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+    $workplaces = (Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null $cookieHeaders).Body | ConvertFrom-Json
+    $cp1 = ($workplaces.items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1)
+    $warehouse = Invoke-BffJson "POST" "/api/warehouse/warehouses" @{
+        workplace_id = $cp1.id; code = "WH-SMR-$unique"; name = "Smoke report WH"; name_fa = "انبار گزارش"
+    } $headers
+    $warehouseId = ($warehouse.Body | ConvertFrom-Json).id
+    $shelf = Invoke-BffJson "POST" "/api/warehouse/warehouses/$warehouseId/shelves" @{ code = "S-01" } $headers
+    $shelfId = ($shelf.Body | ConvertFrom-Json).id
+    $item = Invoke-BffJson "POST" "/api/warehouse/items" @{
+        name = "Smoke report item $unique"; name_fa = "کالای گزارش"; unit = "ad"; min_quantity = "0"
+    } $headers
+    $receive = Invoke-BffJson "POST" "/api/warehouse/placements/receive" @{
+        item_id = ($item.Body | ConvertFrom-Json).id; shelf_id = $shelfId; quantity = "3"; reason = "report smoke"
+    } $headers
+    Assert-True ($receive.Status -eq 200) "receive failed"
+
+    $client = New-Object System.Net.Http.HttpClient
+    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler.UseCookies = $false
+    $client = New-Object System.Net.Http.HttpClient($handler)
+    $client.Timeout = [TimeSpan]::FromSeconds(30)  # bounded: never hang the gate
+    try {
+        $request = New-Object System.Net.Http.HttpRequestMessage("GET", "$frontendOrigin/api/reports/export?report=inventory&page_size=100")
+        $request.Headers.TryAddWithoutValidation("Cookie", (Get-CookiesFromJar $script:jar)) | Out-Null
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
+        Assert-True ($response.StatusCode -eq [System.Net.HttpStatusCode]::OK) "export failed: $([int]$response.StatusCode)"
+        $disposition = $response.Content.Headers.ContentDisposition.FileName
+        Assert-True ($null -ne $disposition -and $disposition -match "inventory-report") "export filename missing: $disposition"
+        $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+        Assert-True ($bytes.Length -gt 100) "export body too small: $($bytes.Length)"
+        Assert-True ($bytes[0] -eq 0x50 -and $bytes[1] -eq 0x4B) "not a zip/xlsx workbook (PK magic bytes)"
+    }
+    finally {
+        $client.Dispose(); $handler.Dispose()
+    }
+
+    # unauthenticated export denied (PS 5.1: 4xx raises — catch and read the status)
+    $unauthStatus = 0
+    try {
+        $null = Invoke-WebRequest -Uri "$frontendOrigin/api/reports/export?report=inventory" -UseBasicParsing -TimeoutSec 15
+        $unauthStatus = 200
+    }
+    catch {
+        if ($_.Exception.Response) { $unauthStatus = [int]$_.Exception.Response.StatusCode }
+        else { $unauthStatus = 0 }
+    }
+    Assert-True ($unauthStatus -eq 401) "unauthenticated export should 401, got $unauthStatus"
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red

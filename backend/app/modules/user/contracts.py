@@ -7,9 +7,10 @@ Cross-module consumers import ONLY from this file — never from
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import ColumnElement, or_, select
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.common.scope import ScopeContext
 from app.modules.user.models import (
     Company,
     Complex,
@@ -27,6 +28,7 @@ __all__ = [
     "EmployeeHolderView",
     "RequesterAnchorView",
     "WorkplaceParentsView",
+    "count_active_employees",
     "get_employee_holder",
     "get_recipient_user_ids",
     "get_user_id_for_employee",
@@ -34,6 +36,27 @@ __all__ = [
     "get_workplace_with_parents",
     "filter_active_user_ids",
 ]
+
+
+def count_active_employees(session: Session, context: ScopeContext) -> int:
+    """Scope-filtered count of active employees (dashboard contract).
+
+    Applies the employee scope filter (permission AND scope coverage —
+    constitution II); a caller without coverage counts zero.
+    """
+    from app.modules.user import employee_repository
+
+    scope = employee_repository._employee_scope_filter(
+        context, employee_repository.EMPLOYEE_READ_OPERATION
+    )
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(Employee)
+            .where(scope, Employee.deleted_at.is_(None), Employee.is_active.is_(True))
+        )
+        or 0
+    )
 
 
 @dataclass(frozen=True)

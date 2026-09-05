@@ -8,24 +8,35 @@ request-fulfillment service owns its atomic boundary (Phase 5).
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.common.scope import ScopeContext
 from app.core.errors import INSUFFICIENT_STOCK, AppError, not_found
-from app.modules.warehouse import repository
+from app.modules.warehouse import repository, request_repository
 from app.modules.warehouse.models import Shelf, Warehouse
 
 __all__ = [
+    "InventoryReportRow",
     "ItemView",
     "MovementView",
     "PlacementRef",
+    "RequestReportRow",
     "ShelfContext",
     "apply_fulfillment_issue",
+    "count_catalog_items",
+    "count_open_item_requests",
+    "count_unresolved_alerts",
     "get_item",
     "get_placement_for_stock",
     "get_shelf_context",
+    "item_requests_status_counts",
+    "low_stock_alerts_by_warehouse",
+    "report_inventory_page",
+    "report_request_page",
 ]
 
 
@@ -210,3 +221,282 @@ def write_audit_contract(
         },
         critical=True,
     )
+
+
+# --- Report/dashboard aggregates (Phase 9, research R3/R5) ---
+
+
+def count_catalog_items(session: Session) -> int:
+    """Active catalog items. The catalog is a global resource: scope gating
+    happens at the endpoint (permission + assignment), not per-row."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import ItemCatalog
+
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(ItemCatalog)
+            .where(ItemCatalog.deleted_at.is_(None))
+        )
+        or 0
+    )
+
+
+def count_open_item_requests(session: Session, context: ScopeContext) -> int:
+    """Scope-filtered count of requests still open (pending + approved).
+
+    ItemRequest is immutable history (no soft delete) — no deleted_at filter.
+    """
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import ItemRequest, RequestStatus
+
+    scope = request_repository._request_scope_filter(
+        context, request_repository.REQUEST_READ_OPERATION
+    )
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(ItemRequest)
+            .where(
+                scope,
+                ItemRequest.status.in_([RequestStatus.PENDING, RequestStatus.APPROVED]),
+            )
+        )
+        or 0
+    )
+
+
+def item_requests_status_counts(
+    session: Session, context: ScopeContext
+) -> dict[str, int]:
+    """Scope-filtered counts by request status (immutable rows — all of them)."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import ItemRequest, RequestStatus
+
+    scope = request_repository._request_scope_filter(
+        context, request_repository.REQUEST_READ_OPERATION
+    )
+    rows = session.execute(
+        select(ItemRequest.status, func.count())
+        .where(scope)
+        .group_by(ItemRequest.status)
+    ).all()
+    counts = {status.value: 0 for status in RequestStatus}
+    for status, count in rows:
+        counts[status.value] = int(count)
+    return counts
+
+
+def count_unresolved_alerts(session: Session, context: ScopeContext) -> int:
+    """Scope-filtered count of unresolved low-stock alerts."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import InventoryPlacement, Shelf, StockAlert
+
+    scope = repository._warehouse_scope_filter(context, "warehouse:alert:read")
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(StockAlert)
+            .join(InventoryPlacement, StockAlert.placement_id == InventoryPlacement.id)
+            .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+            .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+            .where(scope, StockAlert.resolved_at.is_(None))
+        )
+        or 0
+    )
+
+
+def low_stock_alerts_by_warehouse(
+    session: Session, context: ScopeContext
+) -> list[tuple[str, str, int]]:
+    """Unresolved alert counts grouped by warehouse:
+    ``(code, name, count)`` sorted by count descending."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import InventoryPlacement, Shelf, StockAlert
+
+    scope = repository._warehouse_scope_filter(context, "warehouse:alert:read")
+    rows = session.execute(
+        select(Warehouse.code, Warehouse.name, func.count())
+        .select_from(StockAlert)
+        .join(InventoryPlacement, StockAlert.placement_id == InventoryPlacement.id)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .where(scope, StockAlert.resolved_at.is_(None))
+        .group_by(Warehouse.code, Warehouse.name)
+        .order_by(func.count().desc())
+    ).all()
+    return [(code, name, int(count)) for code, name, count in rows]
+
+
+# --- Operational report pages (Phase 9, research R3) ---
+
+
+@dataclass(frozen=True)
+class InventoryReportRow:
+    """Placement projection for the inventory report (US2)."""
+
+    item_id: uuid.UUID
+    item_name: str
+    item_name_fa: str
+    item_code: str | None
+    unit: str
+    warehouse_code: str
+    warehouse_name: str
+    shelf_code: str
+    quantity: Decimal
+    threshold: Decimal
+    below_min: bool
+
+
+def report_inventory_page(
+    session: Session,
+    context: ScopeContext,
+    *,
+    page: int,
+    page_size: int,
+    warehouse_id: uuid.UUID | None = None,
+    below_min_only: bool = False,
+) -> tuple[list[InventoryReportRow], int]:
+    """Scope-filtered placement page (``warehouse:stock:read`` coverage,
+    mirroring the placements listing — constitution II)."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import InventoryPlacement, ItemCatalog, Shelf
+
+    scope = repository._warehouse_scope_filter(context, "warehouse:stock:read")
+    base = (
+        select(InventoryPlacement, ItemCatalog, Shelf, Warehouse)
+        .join(ItemCatalog, InventoryPlacement.item_id == ItemCatalog.id)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .where(scope, Warehouse.deleted_at.is_(None))
+    )
+    if warehouse_id is not None:
+        base = base.where(Warehouse.id == warehouse_id)
+    if below_min_only:
+        base = base.where(InventoryPlacement.quantity < ItemCatalog.min_quantity)
+
+    total = int(
+        session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    )
+    rows = session.execute(
+        base.order_by(Warehouse.code, Shelf.code, ItemCatalog.name)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    ).all()
+    projected = [
+        InventoryReportRow(
+            item_id=item.id,
+            item_name=item.name,
+            item_name_fa=item.name_fa,
+            item_code=item.code,
+            unit=item.unit,
+            warehouse_code=warehouse.code,
+            warehouse_name=warehouse.name,
+            shelf_code=shelf.code,
+            quantity=placement.quantity,
+            threshold=item.min_quantity,
+            below_min=placement.quantity < item.min_quantity,
+        )
+        for placement, item, shelf, warehouse in rows
+    ]
+    return projected, total
+
+
+@dataclass(frozen=True)
+class RequestReportRow:
+    """Item-request projection for the requests report (US2)."""
+
+    id: uuid.UUID
+    status: str
+    requested_by_email: str | None
+    purpose_description: str
+    line_count: int
+    created_at: datetime
+    decided_at: datetime | None
+    fulfilled_at: datetime | None
+
+
+def report_request_page(
+    session: Session,
+    context: ScopeContext,
+    *,
+    page: int,
+    page_size: int,
+    status: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> tuple[list[RequestReportRow], int, dict[str, int]]:
+    """Scope-OR-ownership filtered request page (mirrors the request
+    module's visibility semantics) + status counts over the filtered set."""
+    from sqlalchemy import func, or_
+
+    from app.modules.user.models import User
+    from app.modules.warehouse.models import ItemRequest, ItemRequestLine, RequestStatus
+
+    caller = uuid.UUID(context.user_id)
+    scope = request_repository._request_scope_filter(
+        context, request_repository.REQUEST_READ_OPERATION
+    )
+    visibility = or_(ItemRequest.requested_by == caller, scope)
+
+    base = select(ItemRequest, User.email).join(
+        User, ItemRequest.requested_by == User.id, isouter=True
+    )
+    conditions = [visibility]
+    if status:
+        conditions.append(ItemRequest.status == RequestStatus(status))
+    if date_from is not None:
+        conditions.append(ItemRequest.created_at >= date_from)
+    if date_to is not None:
+        conditions.append(ItemRequest.created_at <= date_to)
+    base = base.where(*conditions)
+
+    total = int(
+        session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    )
+
+    counts_query = (
+        select(ItemRequest.status, func.count())
+        .where(*conditions)
+        .group_by(ItemRequest.status)
+    )
+    status_counts = {member.value: 0 for member in RequestStatus}
+    for row_status, count in session.execute(counts_query).all():
+        status_counts[row_status.value] = int(count)
+
+    rows = session.execute(
+        base.order_by(ItemRequest.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    ).all()
+
+    line_counts: dict[uuid.UUID, int] = {}
+    if rows:
+        request_ids = [request.id for request, _email in rows]
+        count_rows = session.execute(
+            select(ItemRequestLine.request_id, func.count())
+            .where(ItemRequestLine.request_id.in_(request_ids))
+            .group_by(ItemRequestLine.request_id)
+        ).all()
+        line_counts = {request_id: int(count) for request_id, count in count_rows}
+
+    projected = [
+        RequestReportRow(
+            id=request.id,
+            status=request.status.value,
+            requested_by_email=email,
+            purpose_description=request.purpose_description,
+            line_count=line_counts.get(request.id, 0),
+            created_at=request.created_at,
+            decided_at=request.decided_at,
+            fulfilled_at=request.fulfilled_at,
+        )
+        for request, email in rows
+    ]
+    return projected, total, status_counts

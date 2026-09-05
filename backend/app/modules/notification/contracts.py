@@ -61,3 +61,13 @@ def deliver_critical(
 
 def event_is_critical(event_type: str) -> bool:
     return event_type in CRITICAL_EVENTS
+
+
+def count_delivered_notifications(session: Session) -> int:
+    """Total in-app notification rows delivered (dashboard counter; the
+    inbox is personal data so this is an aggregate count only)."""
+    from sqlalchemy import func, select
+
+    return int(
+        session.scalar(select(func.count()).select_from(Notification)) or 0
+    )

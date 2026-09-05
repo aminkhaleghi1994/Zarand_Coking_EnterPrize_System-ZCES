@@ -9,6 +9,7 @@ import {
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { HealthStatusCard } from "@/components/common/HealthStatusCard";
+import { DashboardView } from "@/features/dashboard/DashboardView";
 import { getSession } from "@/lib/session";
 
 const MODULES = [
@@ -29,6 +30,8 @@ export default async function LocalePage({
   setRequestLocale(locale);
   const t = await getTranslations("dashboard");
   const session = await getSession();
+  const canDashboard =
+    session.ok && session.session.permissions.includes("reports:dashboard:read");
 
   return (
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-8 md:px-8 md:py-12">
@@ -60,6 +63,18 @@ export default async function LocalePage({
           </>
         )}
       </section>
+
+      {canDashboard ? (
+        <section aria-labelledby="dashboard-heading" className="grid gap-4">
+          <div className="grid gap-1">
+            <h2 id="dashboard-heading" className="text-xl font-bold">
+              {t("report.title")}
+            </h2>
+            <p className="text-sm text-graphite">{t("report.description")}</p>
+          </div>
+          <DashboardView />
+        </section>
+      ) : null}
 
       <section aria-labelledby="status-heading" className="grid gap-4">
         <div className="grid gap-1">

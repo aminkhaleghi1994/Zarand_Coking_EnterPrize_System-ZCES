@@ -3,6 +3,56 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.9.0] - 2026-09-05
+
+### Added
+- Settings, reports & management dashboard (Phase 9): a global typed
+  settings store (fixed code-defined key set — low-stock alerting,
+  notification recipient defaults, request approval policy, dashboard
+  defaults, feature flags) with version-guarded updates (stale writes
+  rejected with `STALE_VERSION`) and `SETTING_UPDATED` audit rows
+  (before/after snapshots, masked) written in the same transaction;
+  seeded idempotently with defaults; contract reads with code-default
+  fallback so a missing row never breaks a consumer
+- Management dashboard (`GET /reports/dashboard`): scope-filtered
+  headline counters (active employees, catalog items, open item
+  requests, active loans, unresolved low-stock alerts, delivered
+  notifications) plus by-status breakdowns (item requests, loans) and
+  low-stock alerts by warehouse — composed via cross-module contracts,
+  every query applying the owning module's scope filter (constitution
+  II/VI); a Workplace-scoped manager sees their world, not the
+  company's
+- Operational reports: inventory (placements with quantity/threshold/
+  below-min + warehouse & below-min filters), item requests (status +
+  date-range filters with status counts over the filtered set,
+  ownership-OR-scope visibility), loans (per-workplace Jalali-year
+  request counts by status, active loan/guarantee commitments, policy
+  caps), and the sensitive-operations report (filtered audit page
+  reusing `audit:log:read` with the `read_full` snapshot gate)
+- Excel export (`GET /reports/export/excel`): openpyxl write-only
+  workbooks of the current filtered page (≤ 100 rows, same scope and
+  masking rules as the JSON endpoints — masked values are written
+  masked, never raw), bilingual headers per locale, `fa` workbooks with
+  RTL sheet view and Jalali dates, RFC 5987-encoded Persian filenames,
+  headers-only workbook for empty results
+- BFF routes for settings + all reports incl. a binary file passthrough
+  (cookie → Bearer, upstream Content-Disposition verbatim, 30s budget);
+  `settingsApi`/`reportsApi` typed clients
+- Frontend: management dashboard cards (honoring
+  `dashboard.show_*` flags), four-tab reports console (filters,
+  pagination, skeletons, mobile cards, export buttons), settings
+  console with grouped typed controls (bool switch / integer input /
+  JSON textarea) and stale-version surfacing, feature-flag-gated Loans
+  & Assets nav items (fail-open), fully bilingual with Jalali dates in
+  `fa`
+- Migration `0009_settings` (settings table: key unique, JSONB value,
+  value_type CHECK, version — reversible); 7 new permissions seeded
+  (`settings:setting:read/update`, `reports:dashboard/inventory/request/
+  loan:read`, `reports:export:excel`) mapped to Manager/Auditor per the
+  requirements role table; smoke-test settings/reports/export sections
+- Repo housekeeping: phases 4–8 merged into `main` (deployable again);
+  local `opencode.json` ignored
+
 ## [0.8.0] - 2026-09-05
 
 ### Added

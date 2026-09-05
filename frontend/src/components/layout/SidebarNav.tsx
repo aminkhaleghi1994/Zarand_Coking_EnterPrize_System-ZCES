@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 
+import { useFeatureFlags } from "@/features/settings/useFeatureFlags";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,7 @@ import { NAV_GROUPS } from "./nav-items";
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  const { flags } = useFeatureFlags();
 
   return (
     <nav aria-label={t("menu")} className="grid gap-6">
@@ -20,6 +22,18 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             {t(`groups.${group.key}`)}
           </p>
           {group.items.map((item) => {
+            if (
+              item.flagKey === "flags.loan_module_enabled" &&
+              !flags.loansEnabled
+            ) {
+              return null;
+            }
+            if (
+              item.flagKey === "flags.asset_module_enabled" &&
+              !flags.assetsEnabled
+            ) {
+              return null;
+            }
             const Icon = item.icon;
             const active = item.href !== undefined && pathname === item.href;
 

@@ -621,6 +621,169 @@ export const notificationApi = {
     }),
 };
 
+export type SettingRecord = {
+  id: string;
+  key: string;
+  value: unknown;
+  value_type: "boolean" | "integer" | "string" | "json";
+  description: string;
+  description_fa: string;
+  version: number;
+  updated_at: string;
+};
+
+export const settingsApi = {
+  list: (signal?: AbortSignal) =>
+    bffFetch<Page<SettingRecord>>("/api/settings?page_size=100", { signal }),
+  update: (key: string, value: unknown, version: number) =>
+    bffFetch<SettingRecord>(`/api/settings/${key}`, {
+      method: "PATCH",
+      body: { value, version },
+    }),
+};
+
+export type DashboardCounters = {
+  active_employees: number;
+  catalog_items: number;
+  open_item_requests: number;
+  active_loans: number;
+  unresolved_low_stock_alerts: number;
+  delivered_notifications: number;
+};
+
+export type DashboardReport = {
+  counters: DashboardCounters;
+  item_requests_by_status: Record<string, number>;
+  loans_by_status: Record<string, number>;
+  low_stock_alerts_by_warehouse: {
+    warehouse_code: string;
+    warehouse_name: string;
+    count: number;
+  }[];
+};
+
+export type InventoryReportRow = {
+  item_id: string;
+  item_name: string;
+  item_name_fa: string;
+  item_code: string | null;
+  unit: string;
+  warehouse_code: string;
+  warehouse_name: string;
+  shelf_code: string;
+  quantity: string;
+  threshold: string;
+  below_min: boolean;
+};
+
+export type RequestReportRow = {
+  id: string;
+  status: string;
+  requested_by_email: string | null;
+  purpose_description: string;
+  line_count: number;
+  created_at: string;
+  decided_at: string | null;
+  fulfilled_at: string | null;
+};
+
+export type RequestReportPage = Page<RequestReportRow> & {
+  status_counts: Record<string, number>;
+};
+
+export type LoanReportRow = {
+  workplace_id: string;
+  workplace_code: string;
+  workplace_name: string;
+  workplace_name_fa: string;
+  year: number;
+  requests_total: number;
+  requests_pending: number;
+  requests_active: number;
+  requests_settled: number;
+  requests_cancelled: number;
+  active_loan_commitment: string;
+  active_guarantee_commitment: string;
+  policy_max_loan: string;
+  policy_max_guarantee: string;
+};
+
+export type AuditReportRow = {
+  id: string;
+  actor_user_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  before_snapshot: Record<string, unknown> | null;
+  after_snapshot: Record<string, unknown> | null;
+  trace_id: string | null;
+  created_at: string;
+};
+
+export type ReportTab = "inventory" | "requests" | "loans" | "audit";
+
+export type InventoryFilter = {
+  page?: number;
+  pageSize?: number;
+  warehouseId?: string;
+  belowMinOnly?: boolean;
+};
+
+export type RequestFilter = {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type AuditFilter = {
+  page?: number;
+  pageSize?: number;
+  action?: string;
+  entityType?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+function reportQuery(params: Record<string, string | number | boolean | undefined>): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "" && value !== false) {
+      query.set(key, String(value));
+    }
+  }
+  const raw = query.toString();
+  return raw ? `?${raw}` : "";
+}
+
+export const reportsApi = {
+  dashboard: (signal?: AbortSignal) =>
+    bffFetch<DashboardReport>("/api/reports/dashboard", { signal }),
+  inventory: (params: InventoryFilter, signal?: AbortSignal) =>
+    bffFetch<Page<InventoryReportRow>>(
+      `/api/reports/inventory${reportQuery({ ...params })}`,
+      { signal },
+    ),
+  requests: (params: RequestFilter, signal?: AbortSignal) =>
+    bffFetch<RequestReportPage>(
+      `/api/reports/requests${reportQuery({ ...params })}`,
+      { signal },
+    ),
+  loans: (params: { year?: number }, signal?: AbortSignal) =>
+    bffFetch<LoanReportRow[]>(`/api/reports/loans${reportQuery({ ...params })}`, {
+      signal,
+    }),
+  audit: (params: AuditFilter, signal?: AbortSignal) =>
+    bffFetch<Page<AuditReportRow>>(
+      `/api/reports/audit${reportQuery({ ...params })}`,
+      { signal },
+    ),
+  /** Export download URL for a plain link click (cookies ride along). */
+  exportUrl: (report: ReportTab, params: Record<string, string | number | boolean | undefined>, locale: string) =>
+    `/api/reports/export${reportQuery({ report, locale, ...params })}`,
+};
+
 export const requestApi = {
   list: (
     status: "all" | "pending" | "approved" | "rejected" | "fulfilled",

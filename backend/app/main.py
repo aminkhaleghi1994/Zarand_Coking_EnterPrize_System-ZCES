@@ -19,6 +19,8 @@ from app.modules.audit.router import router as audit_router
 from app.modules.loan.router import router as loan_router
 from app.modules.notification.relay import start_relay, stop_relay
 from app.modules.notification.router import router as notification_router
+from app.modules.reports.router import router as reports_router
+from app.modules.settings.router import router as settings_router
 from app.modules.user.router import admin_router as user_admin_router
 from app.modules.user.router import router as user_router
 from app.modules.warehouse.router import router as warehouse_router
@@ -94,6 +96,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(warehouse_router, prefix=resolved.API_V1_PREFIX)
     app.include_router(loan_router, prefix=resolved.API_V1_PREFIX)
     app.include_router(notification_router, prefix=resolved.API_V1_PREFIX)
+    app.include_router(settings_router, prefix=resolved.API_V1_PREFIX)
+    app.include_router(reports_router, prefix=resolved.API_V1_PREFIX)
 
     return app
 
