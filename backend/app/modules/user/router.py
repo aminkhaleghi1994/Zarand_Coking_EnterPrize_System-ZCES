@@ -163,6 +163,7 @@ def create_role(
         actor_user_id=uuid.UUID(context.user_id),
         after={"name": role.name},
     )
+    session.commit()
     return RoleOut.model_validate(role)
 
 
@@ -211,6 +212,7 @@ def assign_role(
         actor_user_id=uuid.UUID(context.user_id),
         after={"role_id": str(payload.role_id), "role_name": role.name},
     )
+    session.commit()
     return SuccessOut()
 
 
@@ -235,6 +237,7 @@ def revoke_role(
         actor_user_id=uuid.UUID(context.user_id),
         before={"role_id": str(role_id), "role_name": role.name if role else None},
     )
+    session.commit()
     return SuccessOut()
 
 
@@ -280,6 +283,8 @@ def assign_scope(
             "workplace_id": str(payload.workplace_id) if payload.workplace_id else None,
         },
     )
+    session.commit()
+    session.refresh(assignment)
     return ScopeAssignmentOut.model_validate(assignment)
 
 
@@ -308,6 +313,7 @@ def revoke_scope(
         actor_user_id=uuid.UUID(context.user_id),
         before=before,
     )
+    session.commit()
     return SuccessOut()
 
 

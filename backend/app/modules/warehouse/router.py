@@ -9,10 +9,24 @@ from app.core.database import get_db
 from app.core.errors import AUTHORIZATION_DENIED, AppError, not_found
 from app.modules.user.dependencies import load_context, require_operation
 from app.modules.user.schemas import PageParams
-from app.modules.warehouse import repository, request_repository, request_service, service
+from app.modules.warehouse import (
+    asset_repository,
+    asset_service,
+    repository,
+    request_repository,
+    request_service,
+    service,
+)
 from app.modules.warehouse.schemas import (
     AdjustIn,
     AlertOut,
+    AssetAssignIn,
+    AssetCreateIn,
+    AssetHistoryOut,
+    AssetOut,
+    AssetRetireIn,
+    AssetReturnIn,
+    AssetUpdateIn,
     DecisionIn,
     FulfillIn,
     IssueIn,
@@ -54,6 +68,12 @@ require_stock_adjust = require_operation("warehouse:stock:adjust")
 require_alert_read = require_operation("warehouse:alert:read")
 require_request_decide = require_operation("warehouse:request:decide")
 require_request_fulfill = require_operation("warehouse:request:fulfill")
+require_asset_read = require_operation("warehouse:asset:read")
+require_asset_create = require_operation("warehouse:asset:create")
+require_asset_update = require_operation("warehouse:asset:update")
+require_asset_retire = require_operation("warehouse:asset:retire")
+require_asset_assign = require_operation("warehouse:asset:assign")
+require_asset_return = require_operation("warehouse:asset:return")
 
 router = APIRouter(tags=["warehouse"])
 
@@ -367,3 +387,115 @@ def post_request_fulfill(
     lines = request_repository.get_request_lines(session, request.id)
     email = request_repository.get_requester_email(session, request.requested_by)
     return request_repository.to_request_out(session, request, lines, email)
+
+
+# --- Assets (Phase 6) ---
+
+
+@router.get("/warehouse/assets", response_model=Page[AssetOut])
+def get_assets(
+    params: PageParams = Depends(),
+    search: str | None = None,
+    status: str = Query(default="available", pattern="^(available|assigned|retired|all)$"),
+    context: ScopeContext = Depends(require_asset_read),
+    session: Session = Depends(get_db),
+) -> Page[AssetOut]:
+    return asset_repository.list_assets(session, context, params, search=search, status=status)
+
+
+@router.post("/warehouse/assets", response_model=AssetOut, status_code=201)
+def post_asset(
+    payload: AssetCreateIn,
+    context: ScopeContext = Depends(require_asset_create),
+    session: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.create_asset(session, context, payload)
+    return asset_repository.to_asset_out(asset)
+
+
+@router.get("/warehouse/assets/{asset_id}", response_model=AssetOut)
+def get_asset_detail(
+    asset_id: uuid.UUID,
+    context: ScopeContext = Depends(require_asset_read),
+    session: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service._load_asset(session, context, asset_id, "warehouse:asset:read")
+    holder_name = (
+        asset_repository.get_holder_name(session, asset.holder_employee_id)
+        if asset.holder_employee_id
+        else None
+    )
+    return asset_repository.to_asset_out(asset, holder_name)
+
+
+@router.patch("/warehouse/assets/{asset_id}", response_model=AssetOut)
+def patch_asset(
+    asset_id: uuid.UUID,
+    payload: AssetUpdateIn,
+    context: ScopeContext = Depends(require_asset_update),
+    session: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.update_asset(session, context, asset_id, payload)
+    holder_name = (
+        asset_repository.get_holder_name(session, asset.holder_employee_id)
+        if asset.holder_employee_id
+        else None
+    )
+    return asset_repository.to_asset_out(asset, holder_name)
+
+
+@router.post("/warehouse/assets/{asset_id}/retire", response_model=AssetOut)
+def post_asset_retire(
+    asset_id: uuid.UUID,
+    payload: AssetRetireIn,
+    context: ScopeContext = Depends(require_asset_retire),
+    session: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.retire_asset(session, context, asset_id, payload)
+    return asset_repository.to_asset_out(asset)
+
+
+@router.post("/warehouse/assets/{asset_id}/assign", response_model=AssetOut)
+def post_asset_assign(
+    asset_id: uuid.UUID,
+    payload: AssetAssignIn,
+    context: ScopeContext = Depends(require_asset_assign),
+    session: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.assign_asset(session, context, asset_id, payload)
+    holder_name = (
+        asset_repository.get_holder_name(session, asset.holder_employee_id)
+        if asset.holder_employee_id
+        else None
+    )
+    return asset_repository.to_asset_out(asset, holder_name)
+
+
+@router.post("/warehouse/assets/{asset_id}/return", response_model=AssetOut)
+def post_asset_return(
+    asset_id: uuid.UUID,
+    payload: AssetReturnIn,
+    context: ScopeContext = Depends(require_asset_return),
+    session: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.return_asset(session, context, asset_id, payload)
+    return asset_repository.to_asset_out(asset)
+
+
+@router.get("/warehouse/assets/{asset_id}/history", response_model=Page[AssetHistoryOut])
+def get_asset_history(
+    asset_id: uuid.UUID,
+    params: PageParams = Depends(),
+    context: ScopeContext = Depends(require_asset_read),
+    session: Session = Depends(get_db),
+) -> Page[AssetHistoryOut]:
+    asset_service._load_asset(session, context, asset_id, "warehouse:asset:read")
+    entries = asset_repository.get_history(session, asset_id)
+    items = [asset_repository.to_history_out(history, name) for history, name in entries]
+    start = (params.page - 1) * params.page_size
+    return Page[AssetHistoryOut](
+        items=items[start : start + params.page_size],
+        total=len(items),
+        page=params.page,
+        page_size=params.page_size,
+    )

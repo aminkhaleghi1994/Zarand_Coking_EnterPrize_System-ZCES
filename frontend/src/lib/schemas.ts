@@ -125,3 +125,48 @@ export const RequestInputSchema = z.object({
 });
 
 export type RequestInput = z.infer<typeof RequestInputSchema>;
+
+export const AssetInputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "assets.validation.nameRequired")
+    .max(200, "assets.validation.nameRequired"),
+  name_fa: z
+    .string()
+    .trim()
+    .min(1, "assets.validation.nameFaRequired")
+    .max(200, "assets.validation.nameFaRequired"),
+  serial: z
+    .string()
+    .trim()
+    .min(1, "assets.validation.serialRequired")
+    .max(100, "assets.validation.serialRequired"),
+  description: z
+    .string()
+    .max(1000, "assets.validation.descriptionTooLong")
+    .optional()
+    .nullable(),
+});
+
+export type AssetInput = z.infer<typeof AssetInputSchema>;
+
+export const AssetAssignInputSchema = z
+  .object({
+    target_type: z.enum(["employee", "location"]),
+    employee_id: z.string().optional().nullable(),
+    location: z.string().trim().max(200).optional().nullable(),
+    note: z.string().max(500, "assets.validation.noteTooLong").optional().nullable(),
+  })
+  .refine(
+    (value) =>
+      value.target_type === "employee"
+        ? Boolean(value.employee_id)
+        : Boolean(value.location && value.location.length > 0),
+    {
+      message: "assets.validation.employeeRequired",
+      path: ["employee_id"],
+    },
+  );
+
+export type AssetAssignInput = z.infer<typeof AssetAssignInputSchema>;

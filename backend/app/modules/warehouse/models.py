@@ -177,7 +177,7 @@ class StockMovement(IDMixin, TimestampMixin, CreatedByMixin, Base):
             MovementType,
             native_enum=False,
             length=20,
-            create_constraint=True,
+            create_constraint=False,
             values_callable=lambda obj: [member.value for member in obj],
         ),
         nullable=False,
@@ -187,6 +187,10 @@ class StockMovement(IDMixin, TimestampMixin, CreatedByMixin, Base):
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     __table_args__ = (
+        CheckConstraint(
+            "movement_type IN ('receive','issue','adjust','fulfillment')",
+            name="ck_stock_movements_movement_type",
+        ),
         Index("ix_stock_movements_placement_created", "placement_id", "created_at"),
         Index("ix_stock_movements_item_created", "item_id", "created_at"),
     )
@@ -255,7 +259,7 @@ class ItemRequest(
             RequestStatus,
             native_enum=False,
             length=20,
-            create_constraint=True,
+            create_constraint=False,
             values_callable=lambda obj: [member.value for member in obj],
         ),
         nullable=False,
@@ -306,4 +310,139 @@ class ItemRequestLine(IDMixin, TimestampMixin, CreatedByMixin, Base):
         CheckConstraint("quantity > 0", name="ck_item_request_lines_quantity_positive"),
         Index("uq_item_request_lines_request_item", "request_id", "item_id", unique=True),
         Index("ix_item_request_lines_request_id", "request_id"),
+    )
+
+
+# --- Assets (Phase 6, requirements §9.2/§18) ---
+
+
+class HolderType(enum.StrEnum):
+    EMPLOYEE = "employee"
+    LOCATION = "location"
+
+
+class AssetAction(enum.StrEnum):
+    CREATED = "created"
+    UPDATED = "updated"
+    ASSIGNED = "assigned"
+    RETURNED = "returned"
+    RETIRED = "retired"
+
+
+class AssetInstance(
+    AuditableEntity,
+    Base,
+):
+    """Master data with a typed current holder; soft-deletable, versioned."""
+
+    __tablename__ = "asset_instances"
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    name_fa: Mapped[str] = mapped_column(String(200), nullable=False)
+    serial: Mapped[str] = mapped_column(String(100), nullable=False)
+    serial_norm: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    holder_type: Mapped[HolderType | None] = mapped_column(
+        Enum(
+            HolderType,
+            native_enum=False,
+            length=20,
+            create_constraint=False,
+            values_callable=lambda obj: [member.value for member in obj],
+        ),
+        nullable=True,
+    )
+    holder_employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        "holder_employee_id",
+        ForeignKey("employees.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    holder_location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    company_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    complex_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    workplace_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "(holder_type IS NULL AND holder_employee_id IS NULL"
+            " AND holder_location IS NULL)"
+            " OR (holder_type = 'employee' AND holder_employee_id IS NOT NULL"
+            " AND holder_location IS NULL)"
+            " OR (holder_type = 'location' AND holder_employee_id IS NULL"
+            " AND holder_location IS NOT NULL)",
+            name="ck_asset_instances_holder_state",
+        ),
+        Index(
+            "uq_asset_instances_serial_norm_active",
+            "serial_norm",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        Index("ix_asset_instances_workplace_id", "workplace_id"),
+        Index("ix_asset_instances_complex_id", "complex_id"),
+        Index("ix_asset_instances_serial_norm", "serial_norm"),
+        Index("ix_asset_instances_holder_employee_id", "holder_employee_id"),
+    )
+
+
+class AssetHistory(IDMixin, TimestampMixin, CreatedByMixin, Base):
+    """Append-only per-asset lifecycle timeline (research R5)."""
+
+    __tablename__ = "asset_histories"
+
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        "asset_id",
+        ForeignKey("asset_instances.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    action: Mapped[AssetAction] = mapped_column(
+        Enum(
+            AssetAction,
+            native_enum=False,
+            length=20,
+            create_constraint=False,
+            values_callable=lambda obj: [member.value for member in obj],
+        ),
+        nullable=False,
+    )
+    from_type: Mapped[HolderType | None] = mapped_column(
+        Enum(
+            HolderType,
+            native_enum=False,
+            length=20,
+            create_constraint=False,
+            values_callable=lambda obj: [member.value for member in obj],
+        ),
+        nullable=True,
+    )
+    from_employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        "from_employee_id",
+        ForeignKey("employees.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    from_location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    to_type: Mapped[HolderType | None] = mapped_column(
+        Enum(
+            HolderType,
+            native_enum=False,
+            length=20,
+            create_constraint=False,
+            values_callable=lambda obj: [member.value for member in obj],
+        ),
+        nullable=True,
+    )
+    to_employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        "to_employee_id",
+        ForeignKey("employees.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    to_location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ('created','updated','assigned','returned','retired')",
+            name="ck_asset_histories_action",
+        ),
+        Index("ix_asset_histories_asset_created", "asset_id", "created_at"),
     )

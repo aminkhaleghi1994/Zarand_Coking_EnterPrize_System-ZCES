@@ -357,6 +357,114 @@
       "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
     }
   },
+  "assets": {
+    "eyebrow": "اموال",
+    "title": "پیگیری اموال",
+    "description": "ثبت اموال، واگذاری به کارمندان یا مکان‌ها و پیگیری تاریخچه آن‌ها.",
+    "filterLabel": "فیلتر وضعیت اموال",
+    "searchLabel": "جستجوی اموال",
+    "searchPlaceholder": "جستجو بر اساس نام یا سریال…",
+    "compose": "ثبت مال جدید",
+    "empty": "مالی در این نما وجود ندارد.",
+    "status": {
+      "all": "همه",
+      "available": "آزاد",
+      "assigned": "واگذارشده",
+      "retired": "بازنشسته"
+    },
+    "holder": {
+      "available": "آزاد",
+      "employee": "کارمند",
+      "location": "مکان"
+    },
+    "table": {
+      "asset": "مال",
+      "serial": "سریال",
+      "status": "وضعیت",
+      "holder": "در اختیار",
+      "actions": "عملیات"
+    },
+    "assign": {
+      "title": "واگذاری مال",
+      "targetType": "واگذاری به",
+      "targetEmployee": "کارمند",
+      "targetLocation": "مکان",
+      "employeePlaceholder": "یک کارمند انتخاب کنید…",
+      "employeeSearchLabel": "فیلتر کارمندان",
+      "location": "مکان",
+      "locationPlaceholder": "مثلاً انبار ۲، قفسه A1",
+      "note": "یادداشت (اختیاری)",
+      "submit": "واگذاری",
+      "submitting": "در حال واگذاری…",
+      "cancel": "انصراف"
+    },
+    "returnAction": {
+      "title": "پس‌گرفتن مال",
+      "note": "یادداشت (اختیاری)",
+      "submit": "پس‌گرفتن",
+      "submitting": "در حال پس‌گرفتن…",
+      "cancel": "انصراف"
+    },
+    "retire": {
+      "title": "بازنشستگی مال",
+      "description": "مال از فهرست فعال خارج می‌شود اما تاریخچه‌اش حفظ می‌شود. این عملیات از این صفحه قابل بازگشت نیست.",
+      "submit": "بازنشستگی",
+      "submitting": "در حال بازنشستگی…",
+      "cancel": "انصراف"
+    },
+    "history": {
+      "title": "تاریخچه",
+      "empty": "هنوز رویدادی ثبت نشده است.",
+      "loadMore": "بارگذاری بیشتر",
+      "loadingMore": "در حال بارگذاری…",
+      "from": "از",
+      "to": "به",
+      "note": "یادداشت",
+      "action": {
+        "created": "ثبت",
+        "updated": "ویرایش",
+        "assigned": "واگذاری",
+        "returned": "پس‌گرفتن",
+        "retired": "بازنشستگی"
+      }
+    },
+    "form": {
+      "createTitle": "ثبت مال",
+      "editTitle": "ویرایش مال",
+      "name": "نام (انگلیسی)",
+      "nameFa": "نام (فارسی)",
+      "serial": "سریال",
+      "serialHint": "سریال باید در میان اموال فعال یکتا باشد.",
+      "description": "توضیحات (اختیاری)",
+      "edit": "ویرایش",
+      "submit": "ثبت",
+      "submitting": "در حال ثبت…",
+      "save": "ذخیره تغییرات",
+      "saving": "در حال ذخیره…",
+      "cancel": "انصراف"
+    },
+    "validation": {
+      "nameRequired": "نام الزامی است (حداکثر ۲۰۰ نویسه).",
+      "nameFaRequired": "نام فارسی الزامی است (حداکثر ۲۰۰ نویسه).",
+      "serialRequired": "سریال الزامی است (حداکثر ۱۰۰ نویسه).",
+      "descriptionTooLong": "توضیحات حداکثر ۱۰۰۰ نویسه است.",
+      "employeeRequired": "برای واگذاری یک کارمند انتخاب کنید.",
+      "locationRequired": "برای واگذاری یک مکان وارد کنید.",
+      "noteTooLong": "یادداشت حداکثر ۵۰۰ نویسه است."
+    },
+    "errors": {
+      "DUPLICATE_RESOURCE": "مال فعالی با این سریال وجود دارد.",
+      "BUSINESS_RULE_VIOLATION": "این عملیات برای وضعیت فعلی مال مجاز نیست.",
+      "VALIDATION_ERROR": "فیلدهای مشخص‌شده را اصلاح کنید و دوباره تلاش کنید.",
+      "AUTHORIZATION_DENIED": "به این عملیات دسترسی ندارید.",
+      "STALE_VERSION": "این مال از زمان بازشدن تغییر کرده — صفحه را به‌روزرسانی کنید.",
+      "CONFLICT_CONCURRENT_UPDATE": "مال توسط شخص دیگری به‌روزرسانی شده — صفحه را به‌روزرسانی کنید.",
+      "RESOURCE_NOT_FOUND": "مال درخواستی یافت نشد.",
+      "AUTHENTICATION_REQUIRED": "لطفاً ابتدا وارد شوید.",
+      "INTERNAL_ERROR": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+      "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
+    }
+  },
   "admin": {
     "eyebrow": "مدیریت",
     "title": "کنترل دسترسی",

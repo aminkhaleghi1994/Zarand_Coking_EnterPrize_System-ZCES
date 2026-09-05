@@ -3,6 +3,30 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.6.0] - 2026-09-01
+
+### Added
+- Asset tracking (Phase 6): asset instances with bilingual names and
+  duplicate-proof serials (normalized partial unique index among active
+  assets — case/whitespace-proof, reusable after retirement); typed
+  assignment to an active in-scope employee or a free-text location with
+  version-guarded races (concurrent assign/return resolve to exactly one
+  winner), returns that clear the holder, retirement blocked while assigned
+  and idempotent when free; append-only `AssetHistory` timeline (from/to
+  holder captured) plus audited `ASSET_CREATED/UPDATED/ASSIGNED/RETURNED/
+  RETIRED` events; scope-pure paginated listing (available/assigned/retired
+  filters + search) and per-asset history endpoint
+- Migration `0006_asset_tracking` (2 tables, serial partial unique,
+  holder-type CHECK, append-only history — reversible)
+- 6 seeded asset permissions (`warehouse:asset:create/read/update/retire/
+  assign/return`) + keeper/approver role mappings
+- Bilingual RTL assets console (status filter chips, debounced search,
+  table-to-card collapse, register/edit form with immutable serial,
+  employee/location assign dialog with scoped employee picker, return and
+  retire confirmations, newest-first history drawer with Jalali dates in
+  `fa`); smoke-test asset E2E section (register → duplicate 409 → assign →
+  blocked retire → return → retire → history → serial reuse)
+
 ## [0.5.0] - 2026-08-31
 
 ### Added

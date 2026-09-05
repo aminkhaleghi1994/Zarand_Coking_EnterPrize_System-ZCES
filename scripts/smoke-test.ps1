@@ -459,6 +459,70 @@ Check "requests: compose + invalid variants + approve + fulfill + overdraw" {
     Assert-True (($refused.Body | ConvertFrom-Json).code -eq "INSUFFICIENT_STOCK") "expected INSUFFICIENT_STOCK"
 }
 
+# --- Asset tracking flow (Phase 6, T015) ---
+
+Check "assets: register + duplicate 409 + assign + blocked retire + return + retire + serial reuse" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+
+    $created = Invoke-BffJson "POST" "/api/warehouse/assets" @{
+        name = "Smoke wrench $unique"; name_fa = "Smoke wrench FA $unique"; serial = "SMK-AST-$unique";
+        description = "smoke asset"
+    } $headers
+    Assert-True ($created.Status -eq 201) "asset create failed: $($created.Status) $($created.Body)"
+    $asset = $created.Body | ConvertFrom-Json
+    Assert-True ($asset.status -eq "available") "expected available after register"
+
+    $duplicate = Invoke-BffJson "POST" "/api/warehouse/assets" @{
+        name = "Smoke wrench 2 $unique"; name_fa = "Smoke wrench 2 FA"; serial = "smk-ast-$unique"
+    } $headers
+    Assert-True ($duplicate.Status -eq 409) "expected duplicate 409, got $($duplicate.Status)"
+    Assert-True (($duplicate.Body | ConvertFrom-Json).code -eq "DUPLICATE_RESOURCE") "expected DUPLICATE_RESOURCE"
+
+    $employees = Invoke-BffJson "GET" "/api/employees?page_size=1&status=active" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    $employee = (($employees.Body | ConvertFrom-Json).items | Select-Object -First 1)
+    Assert-True ($null -ne $employee) "no active employee found to assign"
+
+    $assign = Invoke-BffJson "POST" "/api/warehouse/assets/$($asset.id)/assign" @{
+        version = $asset.version; target_type = "employee"; employee_id = $employee.id; note = "smoke assign"
+    } $headers
+    Assert-True ($assign.Status -eq 200) "assign failed: $($assign.Status) $($assign.Body)"
+    $assigned = $assign.Body | ConvertFrom-Json
+    Assert-True ($assigned.status -eq "assigned" -and $assigned.holder.type -eq "employee") "holder not set to employee"
+
+    $secondAssign = Invoke-BffJson "POST" "/api/warehouse/assets/$($asset.id)/assign" @{
+        version = $assigned.version; target_type = "location"; location = "Smoke shelf"
+    } $headers
+    Assert-True ($secondAssign.Status -eq 422 -or $secondAssign.Status -eq 409) "assign of assigned asset should fail, got $($secondAssign.Status)"
+
+    $blockedRetire = Invoke-BffJson "POST" "/api/warehouse/assets/$($asset.id)/retire" @{ version = $assigned.version } $headers
+    Assert-True ($blockedRetire.Status -eq 422 -or $blockedRetire.Status -eq 409) "retire while assigned should be blocked, got $($blockedRetire.Status)"
+
+    $return = Invoke-BffJson "POST" "/api/warehouse/assets/$($asset.id)/return" @{ version = $assigned.version; note = "smoke return" } $headers
+    Assert-True ($return.Status -eq 200) "return failed: $($return.Status) $($return.Body)"
+    $returned = $return.Body | ConvertFrom-Json
+    Assert-True ($returned.status -eq "available") "asset not available after return"
+
+    $retire = Invoke-BffJson "POST" "/api/warehouse/assets/$($asset.id)/retire" @{ version = $returned.version } $headers
+    Assert-True ($retire.Status -eq 200) "retire after return failed: $($retire.Status) $($retire.Body)"
+    Assert-True ((($retire.Body | ConvertFrom-Json).status) -eq "retired") "asset not retired"
+
+    $history = Invoke-BffJson "GET" "/api/warehouse/assets/$($asset.id)/history" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    $entries = ($history.Body | ConvertFrom-Json).items
+    Assert-True ($history.Body | ConvertFrom-Json).total -ge 4 "expected >= 4 history entries"
+    $actions = @($entries | ForEach-Object { $_.action })
+    Assert-True ($actions[0] -eq "retired") "newest history entry is not retired: $($actions -join ',')"
+    Assert-True ($actions -contains "created" -and $actions -contains "assigned" -and $actions -contains "returned") "history missing lifecycle entries"
+
+    $reuse = Invoke-BffJson "POST" "/api/warehouse/assets" @{
+        name = "Smoke wrench 3 $unique"; name_fa = "Smoke wrench 3 FA"; serial = "SMK-AST-$unique"
+    } $headers
+    Assert-True ($reuse.Status -eq 201) "serial reuse after retire failed: $($reuse.Status) $($reuse.Body)"
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red
