@@ -601,6 +601,101 @@ Check "loans: policy create + duplicate 409 + cascade order + lifecycle + settle
     Assert-True ((($noPolicy.Body | ConvertFrom-Json).details.rule) -eq "no_policy") "expected no_policy rule"
 }
 
+# --- Notifications flow (Phase 8, T014) ---
+
+Check "notifications: critical low-stock alert lands in the same commit + mark-read works" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+
+    # Baseline: clear the inbox so deltas are unambiguous.
+    $null = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
+    $before = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread
+    Assert-True ($before -eq 0) "read-all did not zero the inbox (unread=$before)"
+
+    $workplaces = (Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+    $cp1 = ($workplaces.items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1)
+    Assert-True ($null -ne $cp1) "CP1 workplace not found"
+
+    $warehouse = Invoke-BffJson "POST" "/api/warehouse/warehouses" @{
+        workplace_id = $cp1.id; code = "WH-NTF-$unique"; name = "Smoke notifications WH"; name_fa = "Smoke notifications WH FA"
+    } $headers
+    Assert-True ($warehouse.Status -eq 201) "warehouse create failed: $($warehouse.Status) $($warehouse.Body)"
+    $warehouseId = ($warehouse.Body | ConvertFrom-Json).id
+    $shelf = Invoke-BffJson "POST" "/api/warehouse/warehouses/$warehouseId/shelves" @{ code = "N-01" } $headers
+    Assert-True ($shelf.Status -eq 201) "shelf create failed"
+    $shelfId = ($shelf.Body | ConvertFrom-Json).id
+
+    $item = Invoke-BffJson "POST" "/api/warehouse/items" @{
+        name = "Smoke notify item $unique"; name_fa = "Smoke notify item FA $unique"; unit = "ad"; min_quantity = "10"
+    } $headers
+    Assert-True ($item.Status -eq 201) "item create failed: $($item.Status) $($item.Body)"
+    $itemId = ($item.Body | ConvertFrom-Json).id
+
+    $receive = Invoke-BffJson "POST" "/api/warehouse/placements/receive" @{
+        item_id = $itemId; shelf_id = $shelfId; quantity = "50"; reason = "notify smoke"
+    } $headers
+    Assert-True ($receive.Status -eq 200) "receive failed: $($receive.Status)"
+    $placement = $receive.Body | ConvertFrom-Json
+
+    # Drop below threshold -> low-stock alert; the Critical event's
+    # notification rows must exist in the SAME commit (SC-004).
+    $issue = Invoke-BffJson "POST" "/api/warehouse/placements/issue" @{
+        placement_id = $placement.id; quantity = "45"; reason = "notify smoke issue"
+    } $headers
+    Assert-True ($issue.Status -eq 200) "issue below threshold failed: $($issue.Status)"
+
+    $after = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread
+    Assert-True ($after -gt 0) "critical low-stock notification missing in the same commit (unread=$after)"
+
+    $unread = (Invoke-BffJson "GET" "/api/notifications?unread_only=true&page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+    $lowStock = @($unread.items | Where-Object { $_.event_type -eq "InventoryLowStock" -and $_.payload.item_id -eq $itemId }) | Select-Object -First 1
+    Assert-True ($null -ne $lowStock) "no InventoryLowStock notification for item $itemId"
+    Assert-True ($null -ne $lowStock.payload.body -and $lowStock.payload.body -ne "") "low-stock payload body missing"
+
+    $markRead = Invoke-BffJson "POST" "/api/notifications/$($lowStock.id)/read" @{} $headers
+    Assert-True ($markRead.Status -eq 200) "mark-read failed: $($markRead.Status) $($markRead.Body)"
+    Assert-True (($markRead.Body | ConvertFrom-Json).read_at -ne $null) "read_at not stamped"
+
+    $afterRead = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread
+    Assert-True ($afterRead -lt $after) "mark-read did not decrement unread ($after -> $afterRead)"
+
+    $readAll = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
+    Assert-True ($readAll.Status -eq 200) "read-all failed: $($readAll.Status)"
+    Assert-True (((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread -eq 0) "unread not zero after read-all"
+}
+
+Check "notifications: relay delivers non-critical event within latency" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+
+    $null = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
+
+    # Non-critical event (SC-001/SC-002): capture is in-commit, delivery is
+    # relay-owned -> must appear within relay latency (poll 2s, <= 15s).
+    $item = Invoke-BffJson "POST" "/api/warehouse/items" @{
+        name = "Smoke relay item $unique"; name_fa = "Smoke relay item FA $unique"; unit = "ad"; min_quantity = "0"
+    } $headers
+    Assert-True ($item.Status -eq 201) "item create failed: $($item.Status) $($item.Body)"
+    $itemId = ($item.Body | ConvertFrom-Json).id
+
+    $deadline = (Get-Date).AddSeconds(15)
+    $delivered = $null
+    while ((Get-Date) -lt $deadline -and $null -eq $delivered) {
+        Start-Sleep -Milliseconds 500
+        $list = (Invoke-BffJson "GET" "/api/notifications?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+        $delivered = @($list.items | Where-Object { $_.event_type -eq "ItemCatalogCreated" -and $_.payload.entity_id -eq $itemId }) | Select-Object -First 1
+    }
+    Assert-True ($null -ne $delivered) "relay did not deliver ItemCatalogCreated for item $itemId within 15s"
+
+    $null = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
+}
+
 Write-Host ""
 if ($failures.Count -gt 0) {
     Write-Host "SMOKE TEST FAILED: $($failures.Count) check(s) failed:" -ForegroundColor Red

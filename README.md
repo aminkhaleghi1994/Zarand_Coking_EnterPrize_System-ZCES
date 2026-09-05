@@ -16,12 +16,46 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 7 complete (Loan & Guarantee Module)** — on top of the Phase 1–6
-foundation (platform, auth/RBAC/scopes, org & employees, warehouse catalog
-and inventory, item requests, asset tracking): per-workplace Jalali-year
-loan policies, self-service loan/guarantee requests with the exact §19
-validation cascade, version-guarded lifecycle transitions, and Jalali year
-math. Phases 8–11 run sequentially; next: `notifications-outbox-sse`.
+**Phase 8 complete (Notifications, Event Outbox & Live SSE)** — on top of
+the Phase 1–7 foundation (platform, auth/RBAC/scopes, org & employees,
+warehouse catalog and inventory, item requests, asset tracking, loans):
+in-transaction event capture for all 13 §20 event types, an outbox relay
+with exactly-once per-recipient delivery, a live per-user SSE stream, and
+a bilingual inbox UI with a live unread badge. Phases 9–11 run
+sequentially; next: `settings-reports-dashboard`.
+
+## Notifications (Phase 8)
+
+**Module map**: `backend/app/modules/notification/` (models, schemas,
+repository, service, relay, router, contracts) ·
+`backend/app/common/bus.py` (thread→asyncio event bus) ·
+`frontend/src/features/notifications/` + `app/api/notifications/**` (BFF,
+incl. the streaming SSE passthrough) · migration
+`0008_notifications_outbox_sse`.
+
+**Outbox model**: every mapped business action appends an `EventOutbox`
+row in its own transaction — a rolled-back action leaves no row. The
+lifespan-managed relay claims pending events (`FOR UPDATE SKIP LOCKED`,
+≤ 50 per 2s poll), resolves scope-driven recipients (explicit users plus
+permission-covered holders, implicit deny; deactivated users skipped),
+and inserts notifications exactly-once via the partial unique
+`(outbox_event_id, user_id)`. Failures retry with backoff (≤ 5 attempts)
+then terminally `failed`/`skipped` — never physical deletes, and never
+raising into the business transaction.
+
+**Criticality**: `InventoryLowStock` (v1 of the data-driven map) is
+Critical — its notification rows are written by `deliver_critical` inside
+the alert's commit, so they exist the moment the alert does; everything
+else is relay-delivered.
+
+**Live stream + inbox**: `GET /notifications/stream` pushes
+`event: notification` frames per user over SSE (Bearer-auth, 15s
+keep-alives, no proxy buffering); the inbox endpoints (`GET
+/notifications` newest-first, `unread-count`, idempotent mark-read,
+read-all) are owner-scoped — a user's inbox is personal data. The BFF
+forwards the session cookie (browsers cannot set EventSource headers) and
+propagates client disconnects upstream. The header bell's badge and the
+open panel refresh within relay latency via the stream.
 
 ## Loan module (Phase 7)
 

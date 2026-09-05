@@ -70,12 +70,12 @@
 
 ## Phase 7: US5 — Criticality observability (P2)
 
-- [ ] T013 [US5] Critical-mapping test additions: `InventoryLowStock` in-app rows exist in the SAME commit as the alert; a non-critical event's delivery failure leaves business state untouched and the event retrying (FR-010, SC-004)
+- [x] T013 [US5] Critical-mapping test additions: `InventoryLowStock` in-app rows exist in the SAME commit as the alert; a non-critical event's delivery failure leaves business state untouched and the event retrying (FR-010, SC-004)
 
 ## Phase 8: Polish & Convergence
 
-- [ ] T014 [P] [POL] `scripts/smoke-test.ps1`: notifications section — low-stock alert → outbox row + critical notifications in same commit → requester notification delivered → unread-count increments → mark-read works (SC-001..SC-005)
-- [ ] T015 [POL] CHANGELOG 0.8.0 entry + VERSION bump + README notifications section (outbox model, relay, SSE, criticality)
+- [x] T014 [P] [POL] `scripts/smoke-test.ps1`: notifications section — low-stock alert → outbox row + critical notifications in same commit → requester notification delivered → unread-count increments → mark-read works (SC-001..SC-005)
+- [x] T015 [POL] CHANGELOG 0.8.0 entry + VERSION bump + README notifications section (outbox model, relay, SSE, criticality)
 - [ ] T016 [POL] Full gate: backend ruff/mypy/pytest (scratch DB), frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
 
 ---
