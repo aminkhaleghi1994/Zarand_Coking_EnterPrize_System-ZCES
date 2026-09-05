@@ -46,8 +46,8 @@
 
 ## Phase 5: Excel export backend (US1/US2)
 
-- [ ] T014 [FND] `backend/app/modules/reports/excel.py`: `build_report_workbook(report, rows, locale)` — openpyxl write_only, bilingual headers per locale, `fa` RTL sheet view + Jalali date strings, masked values written as masked strings (never raw for non-read_full users); unit tests: header language, RTL flag, row fidelity, empty-page workbook valid, masking identical to endpoint output
-- [ ] T015 [US1/US2] `reports/router.py` `GET /reports/export/excel` (`reports:export:excel` + the target report's read permission; masking per audit perms): reuses the report services with the same query params, streams workbook with Content-Type/Content-Disposition (filename per report+date); tests: 200 + magic bytes (PK zip header), rows equal filtered page, 403 without export permission, empty result → headers-only workbook, filename/locale handling
+- [x] T014 [FND] `backend/app/modules/reports/excel.py`: `build_report_workbook(report, rows, locale)` — openpyxl write_only, bilingual headers per locale, `fa` RTL sheet view + Jalali date strings, masked values written as masked strings (never raw for non-read_full users); unit tests: header language, RTL flag, row fidelity, empty-page workbook valid, masking identical to endpoint output
+- [x] T015 [US1/US2] `reports/router.py` `GET /reports/export/excel` (`reports:export:excel` + the target report's read permission; masking per audit perms): reuses the report services with the same query params, streams workbook with Content-Type/Content-Disposition (filename per report+date); tests: 200 + magic bytes (PK zip header), rows equal filtered page, 403 without export permission, empty result → headers-only workbook, filename/locale handling
 
 **Checkpoint**: exports byte-verified and permission-gated.
 
