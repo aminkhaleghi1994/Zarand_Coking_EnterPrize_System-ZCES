@@ -603,19 +603,34 @@ Check "loans: policy create + duplicate 409 + cascade order + lifecycle + settle
 
 # --- Notifications flow (Phase 8, T014) ---
 
+function Wait-NotificationDrain([hashtable]$cookieHeaders) {
+    # The relay delivers within ~2s; wait until the unread count is stable
+    # so in-flight events from earlier smoke sections land before we assert
+    # on absolute counts (bounded: ~4s stable, 25s max).
+    $stable = 0; $last = -1
+    $deadline = (Get-Date).AddSeconds(25)
+    while ((Get-Date) -lt $deadline -and $stable -lt 6) {
+        Start-Sleep -Milliseconds 700
+        $current = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null $cookieHeaders).Body | ConvertFrom-Json).unread
+        if ($current -eq $last) { $stable++ } else { $stable = 0; $last = $current }
+    }
+}
+
 Check "notifications: critical low-stock alert lands in the same commit + mark-read works" {
     $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
     Assert-True ($adminLogin.Status -eq 200) "admin login failed"
     Update-JarFromCookies $script:jar $adminLogin.SetCookies
     $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $cookieHeaders = @{ Cookie = Get-CookiesFromJar $script:jar }
     $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
 
-    # Baseline: clear the inbox so deltas are unambiguous.
+    # Baseline: drain in-flight relay deliveries, then clear the inbox.
+    Wait-NotificationDrain $cookieHeaders
     $null = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
-    $before = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread
+    $before = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null $cookieHeaders).Body | ConvertFrom-Json).unread
     Assert-True ($before -eq 0) "read-all did not zero the inbox (unread=$before)"
 
-    $workplaces = (Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+    $workplaces = (Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null $cookieHeaders).Body | ConvertFrom-Json
     $cp1 = ($workplaces.items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1)
     Assert-True ($null -ne $cp1) "CP1 workplace not found"
 
@@ -647,10 +662,10 @@ Check "notifications: critical low-stock alert lands in the same commit + mark-r
     } $headers
     Assert-True ($issue.Status -eq 200) "issue below threshold failed: $($issue.Status)"
 
-    $after = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread
+    $after = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null $cookieHeaders).Body | ConvertFrom-Json).unread
     Assert-True ($after -gt 0) "critical low-stock notification missing in the same commit (unread=$after)"
 
-    $unread = (Invoke-BffJson "GET" "/api/notifications?unread_only=true&page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json
+    $unread = (Invoke-BffJson "GET" "/api/notifications?unread_only=true&page_size=50" $null $cookieHeaders).Body | ConvertFrom-Json
     $lowStock = @($unread.items | Where-Object { $_.event_type -eq "InventoryLowStock" -and $_.payload.item_id -eq $itemId }) | Select-Object -First 1
     Assert-True ($null -ne $lowStock) "no InventoryLowStock notification for item $itemId"
     Assert-True ($null -ne $lowStock.payload.body -and $lowStock.payload.body -ne "") "low-stock payload body missing"
@@ -659,12 +674,16 @@ Check "notifications: critical low-stock alert lands in the same commit + mark-r
     Assert-True ($markRead.Status -eq 200) "mark-read failed: $($markRead.Status) $($markRead.Body)"
     Assert-True (($markRead.Body | ConvertFrom-Json).read_at -ne $null) "read_at not stamped"
 
-    $afterRead = ((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread
-    Assert-True ($afterRead -lt $after) "mark-read did not decrement unread ($after -> $afterRead)"
+    # Deterministic mark-read proof: the notification left the unread list
+    # (relay deliveries of unrelated events may still be in flight).
+    $unreadAfter = (Invoke-BffJson "GET" "/api/notifications?unread_only=true&page_size=100" $null $cookieHeaders).Body | ConvertFrom-Json
+    $stillUnread = @($unreadAfter.items | Where-Object { $_.id -eq $lowStock.id })
+    Assert-True ($stillUnread.Count -eq 0) "marked notification still unread"
 
+    Wait-NotificationDrain $cookieHeaders
     $readAll = Invoke-BffJson "POST" "/api/notifications/read-all" $null $headers
     Assert-True ($readAll.Status -eq 200) "read-all failed: $($readAll.Status)"
-    Assert-True (((Invoke-BffJson "GET" "/api/notifications/unread-count" $null @{ Cookie = Get-CookiesFromJar $script:jar }).Body | ConvertFrom-Json).unread -eq 0) "unread not zero after read-all"
+    Assert-True (((Invoke-BffJson "GET" "/api/notifications/unread-count" $null $cookieHeaders).Body | ConvertFrom-Json).unread -eq 0) "unread not zero after read-all"
 }
 
 Check "notifications: relay delivers non-critical event within latency" {

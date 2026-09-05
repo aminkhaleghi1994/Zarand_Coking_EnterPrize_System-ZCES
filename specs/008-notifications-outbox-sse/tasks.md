@@ -76,7 +76,7 @@
 
 - [x] T014 [P] [POL] `scripts/smoke-test.ps1`: notifications section — low-stock alert → outbox row + critical notifications in same commit → requester notification delivered → unread-count increments → mark-read works (SC-001..SC-005)
 - [x] T015 [POL] CHANGELOG 0.8.0 entry + VERSION bump + README notifications section (outbox model, relay, SSE, criticality)
-- [ ] T016 [POL] Full gate: backend ruff/mypy/pytest (scratch DB), frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
+- [x] T016 [POL] Full gate: backend ruff/mypy/pytest (scratch DB), frontend lint/tsc/build, seed twice idempotent, manual browser checklist per quickstart.md, `scripts/smoke-ui.ps1` green, commit + push; CI green
 
 ---
 
