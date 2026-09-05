@@ -11,6 +11,7 @@ def test_masking_of_snapshots_is_structural() -> None:
             "national_id": "0012345678",
             "refresh_token": "rt-value",
             "role_name": "SuperAdmin",
+            "amount": "20000000.00",
         }
     )
     assert masked is not None
@@ -19,6 +20,7 @@ def test_masking_of_snapshots_is_structural() -> None:
     assert masked["national_id"] == "***5678"
     assert masked["refresh_token"] == "***"
     assert masked["role_name"] == "SuperAdmin"
+    assert masked["amount"] == "***"
 
 
 def test_deferred_audit_without_session_does_not_raise() -> None:

@@ -3,6 +3,38 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.7.0] - 2026-09-01
+
+### Added
+- Loan & guarantee module (Phase 7) — the first dedicated business module
+  (`modules/loan`): LoanPolicy per workplace + Jalali year (loan/guarantee
+  amount caps, yearly and lifetime request counts, pause flag, one policy
+  per workplace+year among active rows) and self-service LoanRequest
+  (employee-owned, loan|guarantee, positive money amount, immutable Jalali
+  year snapshot). Every submission validates against the requester's
+  workplace policy in the exact §19 order — lifetime count → yearly count →
+  active loan cap → active guarantee cap — with the first failing rule
+  named in the error details (current/limit values included); settled,
+  cancelled, and soft-deleted requests never free the count limits; only
+  active same-year requests bind the amount caps; submissions serialize on
+  the policy row (`SELECT … FOR UPDATE`) so cap races resolve to exactly
+  one winner. Lifecycle pending → active → settled/cancelled with
+  version-guarded transitions (settlement stamps `settled_at` and frees the
+  commitment), deactivated employees cannot be activated, ownership +
+  scope-filtered visibility, and audit entries with masked amounts (§21)
+- Dependency-free Jalali calendar conversion (`app/common/jalali.py`,
+  Tehran +03:30 civil time) with Nowruz-boundary and leap-year unit tests —
+  no new runtime dependencies
+- Migration `0007_loan_module` (2 tables, partial unique, type/status/
+  amount/year CHECKs, count/cap composite index — reversible)
+- 9 seeded loan permissions + LoanOfficer role mapping; smoke-test loan
+  section (policy duplicate, loan-cap refusal naming the rule, settle
+  frees, no-policy after retirement)
+- Bilingual RTL loans console (Policies/Requests tabs, year/type/status
+  filters, policy form with duplicate + stale-write surfacing, self-service
+  request form, activate/settle/cancel confirmations, named-rule error
+  messages with live numbers, skeletons, reduced motion)
+
 ## [0.6.0] - 2026-09-01
 
 ### Added

@@ -465,6 +465,101 @@
       "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
     }
   },
+  "loans": {
+    "eyebrow": "وام‌ها",
+    "title": "وام و ضمانت",
+    "description": "سیاست‌های وام هر محل کار و درخواست‌های وام یا ضمانت کارکنان، اعتبارسنجی‌شده بر اساس سال جلالی.",
+    "tabPolicies": "سیاست‌ها",
+    "tabRequests": "درخواست‌ها",
+    "filterLabel": "فیلتر وام",
+    "yearLabel": "سال",
+    "typeLabel": "فیلتر نوع",
+    "statusLabel": "فیلتر وضعیت",
+    "composePolicy": "سیاست جدید",
+    "composeRequest": "درخواست جدید",
+    "empty": "موردی در این نما وجود ندارد.",
+    "status": {
+      "all": "همه",
+      "pending": "در انتظار",
+      "active": "فعال",
+      "settled": "تسویه‌شده",
+      "cancelled": "لغوشده"
+    },
+    "policy": {
+      "workplace": "محل کار",
+      "year": "سال",
+      "maxLoanAmount": "سقف وام فعال",
+      "maxGuaranteeAmount": "سقف ضمانت فعال",
+      "countPerYear": "درخواست در سال",
+      "countLifetime": "درخواست در کل عمر",
+      "active": "فعال",
+      "paused": "موقتاً متوقف",
+      "retired": "بازنشسته",
+      "statusLabel": "وضعیت",
+      "workplacePlaceholder": "یک محل کار انتخاب کنید…"
+    },
+    "request": {
+      "employee": "کارمند",
+      "type": "نوع",
+      "typeLoan": "وام",
+      "typeGuarantee": "ضمانت",
+      "amount": "مبلغ",
+      "year": "سال",
+      "status": "وضعیت",
+      "settledAt": "تسویه‌شده"
+    },
+    "actions": {
+      "edit": "ویرایش",
+      "retire": "بازنشستگی",
+      "activate": "فعال‌سازی",
+      "settle": "تسویه",
+      "cancel": "لغو"
+    },
+    "policyForm": {
+      "createTitle": "سیاست وام جدید",
+      "editTitle": "ویرایش سیاست وام",
+      "submit": "ایجاد",
+      "save": "ذخیره تغییرات",
+      "saving": "در حال ذخیره…",
+      "cancel": "انصراف"
+    },
+    "loanForm": {
+      "title": "درخواست وام جدید",
+      "typeLoan": "وام",
+      "typeGuarantee": "ضمانت",
+      "amount": "مبلغ",
+      "amountHint": "عددی مثبت با حداکثر دو رقم اعشار.",
+      "submit": "ثبت",
+      "submitting": "در حال ثبت…",
+      "cancel": "انصراف"
+    },
+    "validation": {
+      "workplaceRequired": "یک محل کار انتخاب کنید.",
+      "yearInvalid": "سال باید عددی جلالی بین ۱۳۰۰ تا ۱۵۰۰ باشد.",
+      "amountInvalid": "مبلغ باید عددی مثبت با حداکثر دو رقم اعشار باشد.",
+      "amountPositive": "مبلغ باید بزرگ‌تر از صفر باشد.",
+      "countInvalid": "تعدادها باید صفر یا عدد صحیح مثبت باشند."
+    },
+    "rules": {
+      "lifetime_count": "سقف درخواست در کل عمر پر شده است ({used} از {limit}).",
+      "yearly_count": "سقف درخواست امسال پر شده است ({used} از {limit}).",
+      "loan_cap": "تعهد فعال وام از سقف عبور می‌کند ({current_active} از {limit}؛ درخواست {requested}).",
+      "guarantee_cap": "تعهد فعال ضمانت از سقف عبور می‌کند ({current_active} از {limit}؛ درخواست {requested}).",
+      "no_policy": "برای این محل کار در سال {year} سیاست وام فعالی وجود ندارد."
+    },
+    "errors": {
+      "DUPLICATE_RESOURCE": "رکورد فعالی با این کلیدها وجود دارد.",
+      "BUSINESS_RULE_VIOLATION": "این عملیات برای وضعیت فعلی مجاز نیست.",
+      "VALIDATION_ERROR": "فیلدهای مشخص‌شده را اصلاح کنید و دوباره تلاش کنید.",
+      "AUTHORIZATION_DENIED": "به این عملیات دسترسی ندارید.",
+      "STALE_VERSION": "این رکورد از زمان بازشدن تغییر کرده — صفحه را به‌روزرسانی کنید.",
+      "CONFLICT_CONCURRENT_UPDATE": "رکورد توسط شخص دیگری به‌روزرسانی شده — صفحه را به‌روزرسانی کنید.",
+      "RESOURCE_NOT_FOUND": "رکورد درخواستی یافت نشد.",
+      "AUTHENTICATION_REQUIRED": "لطفاً ابتدا وارد شوید.",
+      "INTERNAL_ERROR": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+      "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
+    }
+  },
   "admin": {
     "eyebrow": "مدیریت",
     "title": "کنترل دسترسی",

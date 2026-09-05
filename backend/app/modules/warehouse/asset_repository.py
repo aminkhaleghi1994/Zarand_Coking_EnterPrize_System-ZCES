@@ -168,6 +168,14 @@ def get_asset(session: Session, asset_id: UUID) -> AssetInstance | None:
     return session.scalar(select(AssetInstance).where(AssetInstance.id == asset_id))
 
 
+def get_asset_for_update(session: Session, asset_id: UUID) -> AssetInstance | None:
+    """Mutation load with a row lock so concurrent version-guarded actions
+    (assign/return/retire/update) serialize — exactly one winner."""
+    return session.scalar(
+        select(AssetInstance).where(AssetInstance.id == asset_id).with_for_update()
+    )
+
+
 def get_asset_by_serial_norm(session: Session, serial_norm: str) -> AssetInstance | None:
     return session.scalar(
         select(AssetInstance).where(

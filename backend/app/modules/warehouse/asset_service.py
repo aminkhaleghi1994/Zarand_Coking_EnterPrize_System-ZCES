@@ -80,6 +80,29 @@ def _load_asset(
     raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
 
 
+def _load_asset_for_mutation(
+    session: Session, context: ScopeContext, asset_id: uuid.UUID, operation: str
+) -> AssetInstance:
+    """Row-locked load: the version check below is race-safe because the
+    second concurrent mutation blocks here until the first commits, then
+    observes the bumped version (one winner, constitution §25)."""
+    asset = asset_repository.get_asset_for_update(session, asset_id)
+    units = allowed_units(context, operation)
+    if units.global_access:
+        if asset is None:
+            raise not_found("Asset not found")
+        return asset
+    if asset is None:
+        raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+    if (
+        asset.workplace_id is not None
+        and str(asset.workplace_id) in units.workplace_ids
+        or (asset.complex_id is not None and str(asset.complex_id) in units.complex_ids)
+    ):
+        return asset
+    raise AppError(AUTHORIZATION_DENIED, "Access denied", status_code=403)
+
+
 def _asset_snapshot(asset: AssetInstance, holder_name: str | None) -> dict[str, object]:
     return {
         "id": str(asset.id),
@@ -160,7 +183,7 @@ def create_asset(session: Session, context: ScopeContext, payload: AssetCreateIn
 def update_asset(
     session: Session, context: ScopeContext, asset_id: uuid.UUID, payload: AssetUpdateIn
 ) -> AssetInstance:
-    asset = _load_asset(session, context, asset_id, _ASSET_UPDATE)
+    asset = _load_asset_for_mutation(session, context, asset_id, _ASSET_UPDATE)
     if asset.version != payload.version:
         raise AppError(
             STALE_VERSION,
@@ -226,7 +249,7 @@ def update_asset(
 def retire_asset(
     session: Session, context: ScopeContext, asset_id: uuid.UUID, payload: AssetRetireIn
 ) -> AssetInstance:
-    asset = _load_asset(session, context, asset_id, _ASSET_RETIRE)
+    asset = _load_asset_for_mutation(session, context, asset_id, _ASSET_RETIRE)
     if asset.deleted_at is None:
         if asset.holder_type is not None:
             raise AppError(
@@ -294,7 +317,7 @@ def payload_note(payload: AssetRetireIn | AssetReturnIn) -> str | None:
 def assign_asset(
     session: Session, context: ScopeContext, asset_id: uuid.UUID, payload: AssetAssignIn
 ) -> AssetInstance:
-    asset = _load_asset(session, context, asset_id, _ASSET_ASSIGN)
+    asset = _load_asset_for_mutation(session, context, asset_id, _ASSET_ASSIGN)
     if asset.version != payload.version:
         raise AppError(
             STALE_VERSION,
@@ -374,7 +397,7 @@ def assign_asset(
 def return_asset(
     session: Session, context: ScopeContext, asset_id: uuid.UUID, payload: AssetReturnIn
 ) -> AssetInstance:
-    asset = _load_asset(session, context, asset_id, _ASSET_RETURN)
+    asset = _load_asset_for_mutation(session, context, asset_id, _ASSET_RETURN)
     if asset.version != payload.version:
         raise AppError(
             STALE_VERSION,

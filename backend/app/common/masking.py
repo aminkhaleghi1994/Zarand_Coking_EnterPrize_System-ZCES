@@ -7,6 +7,8 @@ SENSITIVE_KEYS_FULL_MASK = frozenset(
         "refresh_token",
         "secret",
         "api_key",
+        # Loan money amounts (requirements §21: loan data is sensitive)
+        "amount",
     }
 )
 SENSITIVE_KEYS_IDENTIFIER = frozenset({"national_id", "personnel_code"})

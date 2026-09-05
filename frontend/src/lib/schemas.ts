@@ -170,3 +170,32 @@ export const AssetAssignInputSchema = z
   );
 
 export type AssetAssignInput = z.infer<typeof AssetAssignInputSchema>;
+
+export const LoanPolicyInputSchema = z.object({
+  workplace_id: z.string().min(1, "loans.validation.workplaceRequired"),
+  year: z.coerce
+    .number()
+    .int()
+    .min(1300, "loans.validation.yearInvalid")
+    .max(1500, "loans.validation.yearInvalid"),
+  max_loan_amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, "loans.validation.amountInvalid"),
+  max_guarantee_amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, "loans.validation.amountInvalid"),
+  max_request_count_per_year: z.coerce.number().int().min(0, "loans.validation.countInvalid"),
+  max_request_count_lifetime: z.coerce.number().int().min(0, "loans.validation.countInvalid"),
+});
+
+export type LoanPolicyInput = z.infer<typeof LoanPolicyInputSchema>;
+
+export const LoanRequestInputSchema = z.object({
+  type: z.enum(["loan", "guarantee"]),
+  amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, "loans.validation.amountInvalid")
+    .refine((value) => Number(value) > 0, { message: "loans.validation.amountPositive" }),
+});
+
+export type LoanRequestInput = z.infer<typeof LoanRequestInputSchema>;

@@ -79,6 +79,15 @@ BASE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("warehouse:asset:retire", "Retire assets", "بازنشسته‌کردن دارایی‌ها"),
     ("warehouse:asset:assign", "Assign assets", "تخصیص دارایی"),
     ("warehouse:asset:return", "Return assets", "بازگرداندن دارایی"),
+    ("loan:policy:create", "Create loan policies", "ایجاد سیاست وام"),
+    ("loan:policy:read", "View loan policies", "مشاهده سیاست‌های وام"),
+    ("loan:policy:update", "Update loan policies", "ویرایش سیاست‌های وام"),
+    ("loan:policy:retire", "Retire loan policies", "بازنشسته‌کردن سیاست‌های وام"),
+    ("loan:request:create", "Submit loan requests", "ثبت درخواست وام"),
+    ("loan:request:read", "View loan requests", "مشاهده درخواست‌های وام"),
+    ("loan:request:activate", "Activate loan requests", "فعال‌سازی درخواست‌های وام"),
+    ("loan:request:settle", "Settle loan requests", "تسویه درخواست‌های وام"),
+    ("loan:request:cancel", "Cancel loan requests", "لغو درخواست‌های وام"),
 ]
 
 BASE_ROLES: list[str] = [
@@ -127,6 +136,17 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "warehouse:request:read",
         "warehouse:request:decide",
         "warehouse:asset:read",
+    ],
+    "LoanOfficer": [
+        "loan:policy:create",
+        "loan:policy:read",
+        "loan:policy:update",
+        "loan:policy:retire",
+        "loan:request:create",
+        "loan:request:read",
+        "loan:request:activate",
+        "loan:request:settle",
+        "loan:request:cancel",
     ],
 }
 
