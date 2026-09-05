@@ -104,3 +104,24 @@ export const WarehouseItemInputSchema = z.object({
 });
 
 export type WarehouseItemInput = z.infer<typeof WarehouseItemInputSchema>;
+
+export const RequestInputSchema = z.object({
+  purpose_description: z
+    .string()
+    .trim()
+    .min(1, "requests.validation.purposeRequired")
+    .max(2000, "requests.validation.purposeTooLong"),
+  lines: z
+    .array(
+      z.object({
+        item_id: z.string().min(1, "requests.validation.itemRequired"),
+        quantity: z
+          .string()
+          .regex(/^\d+(\.\d{1,3})?$/, "requests.validation.quantityInvalid"),
+        note: z.string().max(500, "requests.validation.noteTooLong").optional().nullable(),
+      }),
+    )
+    .min(1, "requests.validation.linesRequired"),
+});
+
+export type RequestInput = z.infer<typeof RequestInputSchema>;

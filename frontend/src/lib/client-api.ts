@@ -269,11 +269,41 @@ export type StockAlert = {
   resolved_at: string | null;
 };
 
+export type RequestLine = {
+  id: string;
+  item: ItemBrief;
+  quantity: string;
+  note: string | null;
+};
+
+export type RequestRecord = {
+  id: string;
+  version: number;
+  status: "pending" | "approved" | "rejected" | "fulfilled";
+  requested_by: string;
+  requested_by_email: string | null;
+  purpose_description: string;
+  decision_note: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  fulfilled_at: string | null;
+  lines: RequestLine[];
+  created_at: string;
+};
+
+export type MePayload = {
+  user: { id: string; email: string; username: string; is_active: boolean };
+  roles: string[];
+  permissions: string[];
+  scopes: ScopeAssignment[];
+};
+
 export type WarehouseListParams = {
   page?: number;
   pageSize?: number;
   search?: string;
   workplaceId?: string;
+  itemId?: string;
   includeEmpty?: boolean;
 };
 
@@ -283,6 +313,7 @@ function warehouseQuery(params: WarehouseListParams): string {
   if (params.pageSize) query.set("page_size", String(params.pageSize));
   if (params.search) query.set("search", params.search);
   if (params.workplaceId) query.set("workplace_id", params.workplaceId);
+  if (params.itemId) query.set("item_id", params.itemId);
   if (params.includeEmpty) query.set("include_empty", "true");
   const raw = query.toString();
   return raw ? `?${raw}` : "";
@@ -358,4 +389,34 @@ export const warehouseApi = {
     list: (status: "true" | "false" | "all", signal?: AbortSignal) =>
       bffFetch<Page<StockAlert>>(`/api/warehouse/alerts?active=${status}&page_size=50`, { signal }),
   },
+  me: (signal?: AbortSignal) => bffFetch<MePayload>("/api/auth/me", { signal }),
+};
+
+export const requestApi = {
+  list: (
+    status: "all" | "pending" | "approved" | "rejected" | "fulfilled",
+    signal?: AbortSignal,
+  ) =>
+    bffFetch<Page<RequestRecord>>(`/api/warehouse/requests?status=${status}&page_size=50`, {
+      signal,
+    }),
+  get: (id: string, signal?: AbortSignal) =>
+    bffFetch<RequestRecord>(`/api/warehouse/requests/${id}`, { signal }),
+  create: (payload: unknown) =>
+    bffFetch<RequestRecord>("/api/warehouse/requests", { method: "POST", body: payload }),
+  approve: (id: string, version: number, note?: string) =>
+    bffFetch<RequestRecord>(`/api/warehouse/requests/${id}/approve`, {
+      method: "POST",
+      body: { version, note: note || null },
+    }),
+  reject: (id: string, version: number, note?: string) =>
+    bffFetch<RequestRecord>(`/api/warehouse/requests/${id}/reject`, {
+      method: "POST",
+      body: { version, note: note || null },
+    }),
+  fulfill: (id: string, version: number, lines: { line_id: string; placement_id: string }[]) =>
+    bffFetch<RequestRecord>(`/api/warehouse/requests/${id}/fulfill`, {
+      method: "POST",
+      body: { version, lines },
+    }),
 };

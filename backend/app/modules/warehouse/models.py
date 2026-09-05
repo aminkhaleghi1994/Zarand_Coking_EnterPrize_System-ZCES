@@ -18,9 +18,11 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
+    Uuid,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -218,4 +220,90 @@ class StockAlert(IDMixin, TimestampMixin, Base):
             postgresql_where=text("resolved_at IS NULL"),
         ),
         Index("ix_stock_alerts_item_id", "item_id"),
+    )
+
+
+# --- Item requests (Phase 5, requirements §9.2/§17) ---
+
+
+class RequestStatus(enum.StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    FULFILLED = "fulfilled"
+
+
+class ItemRequest(
+    IDMixin,
+    TimestampMixin,
+    CreatedByMixin,
+    UpdatedByMixin,
+    Base,
+):
+    """Immutable flow history — no edit/cancel/delete paths (research R2/R7)."""
+
+    __tablename__ = "item_requests"
+
+    requested_by: Mapped[uuid.UUID] = mapped_column(
+        "requested_by",
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    purpose_description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[RequestStatus] = mapped_column(
+        Enum(
+            RequestStatus,
+            native_enum=False,
+            length=20,
+            create_constraint=True,
+            values_callable=lambda obj: [member.value for member in obj],
+        ),
+        nullable=False,
+        default=RequestStatus.PENDING,
+    )
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    fulfilled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    company_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    complex_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    workplace_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','approved','rejected','fulfilled')",
+            name="ck_item_requests_status",
+        ),
+        Index("ix_item_requests_requested_by", "requested_by"),
+        Index("ix_item_requests_workplace_id", "workplace_id"),
+        Index("ix_item_requests_complex_id", "complex_id"),
+        Index("ix_item_requests_status", "status"),
+    )
+
+
+class ItemRequestLine(IDMixin, TimestampMixin, CreatedByMixin, Base):
+    __tablename__ = "item_request_lines"
+
+    request_id: Mapped[uuid.UUID] = mapped_column(
+        "request_id",
+        ForeignKey("item_requests.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    item_id: Mapped[uuid.UUID] = mapped_column(
+        "item_id",
+        ForeignKey("item_catalog.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_item_request_lines_quantity_positive"),
+        Index("uq_item_request_lines_request_item", "request_id", "item_id", unique=True),
+        Index("ix_item_request_lines_request_id", "request_id"),
     )

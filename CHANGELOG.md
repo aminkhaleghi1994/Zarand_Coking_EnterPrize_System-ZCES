@@ -3,6 +3,27 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.5.0] - 2026-08-31
+
+### Added
+- Item request flow (Phase 5): self-service item requests (purpose
+  description + one or more catalog lines with ≤3-decimal quantities),
+  WarehouseApprover approve/reject decisions (version-guarded, only from
+  pending, audited), and keeper fulfillment that decrements each line through
+  the Phase-4 contract `apply_fulfillment_issue` — fulfillment movements,
+  alert evaluation, FOR UPDATE serialization and one all-or-nothing
+  transaction per request; insufficient stock refuses atomically naming the
+  line; ownership-scoped self-service visibility plus scope-filtered
+  warehouse-actor visibility (workplace anchor snapshot at creation);
+  bilingual RTL requests console (compose line editor with the live item
+  picker, status filters, permission-gated decision/fulfillment actions,
+  per-line placement selection)
+- Migration `0005_item_requests_flow` (2 tables, status/quantity CHECKs,
+  unique request-item lines — reversible, verified round-trip)
+- 3 seeded request permissions (`warehouse:request:read/decide/fulfill`) +
+  approver/keeper role mappings; smoke-test request E2E section (compose,
+  invalid variants, approve, fulfill, overdraw refusal)
+
 ## [0.4.0] - 2026-08-31
 
 ### Added

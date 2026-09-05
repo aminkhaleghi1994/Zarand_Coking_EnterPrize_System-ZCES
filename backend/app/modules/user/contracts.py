@@ -10,9 +10,14 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.user.models import Company, Complex, Workplace
+from app.modules.user.models import Company, Complex, Employee, User, Workplace
 
-__all__ = ["WorkplaceParentsView", "get_workplace_with_parents"]
+__all__ = [
+    "RequesterAnchorView",
+    "WorkplaceParentsView",
+    "get_user_workplace_anchor",
+    "get_workplace_with_parents",
+]
 
 
 @dataclass(frozen=True)
@@ -53,4 +58,39 @@ def get_workplace_with_parents(
         complex_id=complex_.id,
         complex_code=complex_.code,
         company_id=company.id,
+    )
+
+
+@dataclass(frozen=True)
+class RequesterAnchorView:
+    company_id: uuid.UUID | None
+    complex_id: uuid.UUID | None
+    workplace_id: uuid.UUID | None
+
+
+def get_user_workplace_anchor(session: Session, user_id: uuid.UUID) -> RequesterAnchorView | None:
+    """Organizational anchor of a user via their employee record.
+
+    Returns None when the user has no employee record (bootstrap identities) —
+    callers anchor such requests as unanchored (global-scope-only visibility).
+    """
+    user = session.get(User, user_id)
+    if user is None or user.employee_id is None:
+        return None
+    employee = session.get(Employee, user.employee_id)
+    if employee is None:
+        return None
+    row = session.execute(
+        select(Workplace, Complex, Company)
+        .join(Complex, Workplace.complex_id == Complex.id)
+        .join(Company, Complex.company_id == Company.id)
+        .where(Workplace.id == employee.workplace_id)
+    ).first()
+    if row is None:
+        return None
+    workplace, complex_, company = row
+    return RequesterAnchorView(
+        company_id=company.id,
+        complex_id=complex_.id,
+        workplace_id=workplace.id,
     )

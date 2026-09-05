@@ -16,14 +16,31 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 4 complete (Warehouse, Item Catalog & Inventory)** — on top of the
-Phase 1–3 foundation (platform, auth/RBAC/scopes, org structure & employees):
-an item catalog with duplicate-proof bilingual names/optional SKU codes and
-debounced live search, workplace-anchored warehouses with shelves, shelf-level
-stock placements that only ever change through an append-only movement ledger
-(FOR UPDATE serialization, negative quantities structurally impossible),
-low-stock alert episodes, and the bilingual RTL warehouse console. Phases
-5–11 run sequentially; next: `item-requests-flow`.
+**Phase 5 complete (Item Request Flow)** — on top of the Phase 1–4
+foundation (platform, auth/RBAC/scopes, org & employees, warehouse catalog
+and inventory): self-service item requests, WarehouseApprover decisions and
+keeper fulfillment that draws stock atomically through the movement ledger.
+Phases 6–11 run sequentially; next: `asset-tracking`.
+
+## Item request flow (Phase 5)
+
+**Module map**: `backend/app/modules/warehouse/request_repository.py` +
+`request_service.py` (requests are warehouse-domain data per requirements
+§9.2) · `frontend/src/features/requests/` + `app/api/warehouse/requests/**`
+· migration `0005_item_requests_flow`.
+
+**Flow**: `pending` → (WarehouseApprover) `approved` / `rejected` →
+(keeper) `fulfilled`. Decisions are version-guarded (concurrent decisions
+resolve to exactly one winner); fulfillment decrements every line through
+`apply_fulfillment_issue` in one all-or-nothing transaction — insufficient
+stock refuses atomically with the offending line named. Every transition is
+audited (`REQUEST_CREATED/APPROVED/REJECTED/FULFILLED` — the §20 domain
+events; notification delivery arrives in Phase 8).
+
+**Permissions**: self-service compose/own-view (any active user,
+ownership-scoped) · `warehouse:request:read` (scope-wide visibility) ·
+`warehouse:request:decide` (WarehouseApprover) ·
+`warehouse:request:fulfill` (WarehouseKeeper).
 
 ## Warehouse module (Phase 4)
 

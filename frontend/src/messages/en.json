@@ -12,6 +12,7 @@
     "dashboard": "Dashboard",
     "employees": "Employees",
     "warehouse": "Warehouse",
+    "requests": "Item Requests",
     "assets": "Assets",
     "loans": "Loans",
     "reports": "Reports",
@@ -293,6 +294,67 @@
       "unitRequired": "Unit of measure is required (max 30 characters).",
       "minQuantityInvalid": "Minimum quantity must be a non-negative number with up to 3 decimals.",
       "descriptionTooLong": "Description must be at most 1000 characters."
+    }
+  },
+  "requests": {
+    "eyebrow": "Requests",
+    "title": "Item Requests",
+    "description": "Raise item requests, review and fulfill them.",
+    "filterLabel": "Request status filter",
+    "compose": "New request",
+    "empty": "No requests in this view.",
+    "status": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "fulfilled": "Fulfilled"
+    },
+    "decisionNote": "Decision note: {note}",
+    "decisionNotePlaceholder": "Decision note (optional)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "fulfill": "Fulfill",
+    "form": {
+      "title": "New item request",
+      "purpose": "Purpose",
+      "purposePlaceholder": "Why do you need these items?",
+      "lines": "Lines",
+      "item": "Item",
+      "quantity": "Quantity",
+      "lineNote": "Line note (optional)",
+      "addLine": "Add line",
+      "removeLine": "Remove",
+      "submit": "Submit request",
+      "submitting": "Submitting…"
+    },
+    "fulfill": {
+      "title": "Fulfill request",
+      "placementPlaceholder": "Select a placement…",
+      "submit": "Fulfill",
+      "submitting": "Fulfilling…",
+      "cancel": "Cancel"
+    },
+    "validation": {
+      "purposeRequired": "Purpose is required (max 2000 characters).",
+      "purposeTooLong": "Purpose is required (max 2000 characters).",
+      "linesRequired": "Add at least one line.",
+      "itemRequired": "Pick an item for every line.",
+      "quantityInvalid": "Quantity must be a positive number with up to 3 decimals.",
+      "noteTooLong": "Line note must be at most 500 characters."
+    },
+    "errors": {
+      "INSUFFICIENT_STOCK": "Not enough stock to fulfill this request — check the available quantities.",
+      "BUSINESS_RULE_VIOLATION": "This action is not allowed for the request's current status.",
+      "DUPLICATE_RESOURCE": "A duplicate record already exists.",
+      "VALIDATION_ERROR": "Please fix the highlighted fields and try again.",
+      "AUTHORIZATION_DENIED": "You do not have access to this operation.",
+      "STALE_VERSION": "This request changed since you opened it — refresh and retry.",
+      "CONFLICT_CONCURRENT_UPDATE": "Someone else updated this request — refresh and retry.",
+      "RESOURCE_NOT_FOUND": "The requested record was not found.",
+      "AUTHENTICATION_REQUIRED": "Please sign in first.",
+      "INTERNAL_ERROR": "Something went wrong. Please try again.",
+      "generic": "The operation failed. Please try again."
     }
   },
   "admin": {
