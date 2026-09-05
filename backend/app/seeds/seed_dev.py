@@ -88,6 +88,13 @@ BASE_PERMISSIONS: list[tuple[str, str, str]] = [
     ("loan:request:activate", "Activate loan requests", "فعال‌سازی درخواست‌های وام"),
     ("loan:request:settle", "Settle loan requests", "تسویه درخواست‌های وام"),
     ("loan:request:cancel", "Cancel loan requests", "لغو درخواست‌های وام"),
+    ("settings:setting:read", "Read system settings", "مشاهده تنظیمات سامانه"),
+    ("settings:setting:update", "Update system settings", "ویرایش تنظیمات سامانه"),
+    ("reports:dashboard:read", "View the management dashboard", "مشاهده داشبورد مدیریتی"),
+    ("reports:inventory:read", "View the inventory report", "مشاهده گزارش موجودی"),
+    ("reports:request:read", "View the item requests report", "مشاهده گزارش درخواست‌های کالا"),
+    ("reports:loan:read", "View the loans report", "مشاهده گزارش وام"),
+    ("reports:export:excel", "Export reports to Excel", "خروجی اکسل گزارش‌ها"),
 ]
 
 BASE_ROLES: list[str] = [
@@ -102,8 +109,21 @@ BASE_ROLES: list[str] = [
 
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "SuperAdmin": [code for code, _, _ in BASE_PERMISSIONS],
-    "Auditor": ["audit:log:read", "audit:log:read_full", "user:list:read"],
-    "Manager": ["user:list:read"],
+    "Auditor": [
+        "audit:log:read",
+        "audit:log:read_full",
+        "user:list:read",
+        "reports:export:excel",
+    ],
+    "Manager": [
+        "user:list:read",
+        "settings:setting:read",
+        "reports:dashboard:read",
+        "reports:inventory:read",
+        "reports:request:read",
+        "reports:loan:read",
+        "reports:export:excel",
+    ],
     "WarehouseKeeper": [
         "warehouse:item:create",
         "warehouse:item:read",
@@ -288,6 +308,30 @@ def _seed_organization(session: Session) -> int:
     return created
 
 
+def _seed_settings(session: Session) -> int:
+    """Idempotent setting-default upsert keyed by the fixed key set. Returns created count."""
+    from app.modules.settings.defaults import SETTING_DEFAULTS
+    from app.modules.settings.models import Setting
+
+    created = 0
+    for item in SETTING_DEFAULTS:
+        existing = session.scalar(select(Setting).where(Setting.key == item.key))
+        if existing is None:
+            session.add(
+                Setting(
+                    key=item.key,
+                    value=item.value,
+                    value_type=item.value_type,
+                    description=item.description,
+                    description_fa=item.description_fa,
+                    version=1,
+                )
+            )
+            session.flush()
+            created += 1
+    return created
+
+
 def _assert_safe_admin_password(password: str, username: str, email: str) -> None:
     normalized = (password or "").strip()
     if not normalized or len(normalized) < 8:
@@ -369,12 +413,15 @@ def run_seed(session: Session, *, prod: bool = False) -> dict[str, int]:
             critical=True,
         )
 
+    settings_created = _seed_settings(session)
+
     session.commit()
     return {
         "permissions_created": created_permissions,
         "roles_created": created_roles,
         "admin_created": int(created_admin),
         "org_created": org_created,
+        "settings_created": settings_created,
     }
 
 
