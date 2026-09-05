@@ -64,7 +64,35 @@
       }
     },
     "phaseBadge": "Phase {phase}",
-    "version": "Version"
+    "version": "Version",
+    "report": {
+      "title": "Management dashboard",
+      "description": "Scope-filtered counters and breakdowns across the platform.",
+      "loadError": "The dashboard could not be loaded.",
+      "counters": {
+        "active_employees": "Active employees",
+        "catalog_items": "Catalog items",
+        "open_item_requests": "Open item requests",
+        "active_loans": "Active loans",
+        "unresolved_low_stock_alerts": "Unresolved low-stock alerts",
+        "delivered_notifications": "Delivered notifications"
+      },
+      "requestsBreakdown": "Item requests by status",
+      "loansBreakdown": "Loans by status",
+      "alertsBreakdown": "Low-stock alerts by warehouse",
+      "requestStatus": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "fulfilled": "Fulfilled"
+      },
+      "loanStatus": {
+        "pending": "Pending",
+        "active": "Active",
+        "settled": "Settled",
+        "cancelled": "Cancelled"
+      }
+    }
   },
   "a11y": {
     "skipToContent": "Skip to main content"
@@ -707,6 +735,90 @@
       "LoanRequestSettled": "Loan settled",
       "AssetAssigned": "Asset assigned",
       "AssetReturned": "Asset returned"
+    }
+  },
+  "settings": {
+    "eyebrow": "System",
+    "title": "Settings",
+    "description": "Global system settings — every change is version-guarded and audited.",
+    "noAccess": "You do not have permission to view system settings.",
+    "loadError": "Settings could not be loaded.",
+    "groups": {
+      "alerting": "Low-stock alerting",
+      "notifications": "Notification recipients",
+      "requests": "Request approval policy",
+      "dashboard": "Dashboard defaults",
+      "flags": "Feature flags"
+    },
+    "versionLabel": "v{version}",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "save": "Save",
+    "saved": "Saved.",
+    "staleVersion": "This setting changed elsewhere — the form reloaded the current value, adjust and retry.",
+    "invalidValue": "The value does not match the setting's type.",
+    "saveFailed": "Saving failed — try again.",
+    "auditNote": "Every change is recorded in the sensitive-operations report.",
+    "reportsLink": "Open reports"
+  },
+  "reports": {
+    "eyebrow": "Insights",
+    "title": "Reports",
+    "description": "Trustworthy, scope-filtered overviews with Excel export.",
+    "noAccess": "You do not have permission to view any report.",
+    "loadError": "The report could not be loaded.",
+    "empty": "No rows match the current filters.",
+    "tabsLabel": "Report tabs",
+    "tabs": {
+      "inventory": "Inventory",
+      "requests": "Item requests",
+      "loans": "Loans",
+      "audit": "Sensitive operations"
+    },
+    "export": "Excel",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pageOf": "Page {page} of {pages}",
+    "filters": {
+      "belowMinOnly": "Below threshold only",
+      "all": "All",
+      "statusLabel": "Status filter",
+      "actionPlaceholder": "Filter by action…"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "fulfilled": "Fulfilled"
+    },
+    "statusCounts": "{pending} pending · {approved} approved · {rejected} rejected · {fulfilled} fulfilled",
+    "inventory": {
+      "belowMin": "Below minimum",
+      "location": "{warehouse} · shelf {shelf}",
+      "quantities": "{quantity} {unit} on hand · threshold {threshold}",
+      "empty": "No placements match the current filters."
+    },
+    "requests": {
+      "requester": "{email}",
+      "lines": "{count, plural, one {# line} other {# lines}}",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "fulfilled": "Fulfilled"
+      },
+      "empty": "No requests match the current filters."
+    },
+    "loans": {
+      "year": "Year {year}",
+      "counts": "{total} total · {pending} pending · {active} active · {settled} settled · {cancelled} cancelled",
+      "commitments": "Active commitments — loans {loan} · guarantees {guarantee}",
+      "caps": "Policy caps — loans {loan} · guarantees {guarantee}",
+      "noPolicy": "No active policy for this year."
+    },
+    "audit": {
+      "entity": "{type}",
+      "empty": "No audit entries match the current filters."
     }
   }
 }

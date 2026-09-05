@@ -64,7 +64,35 @@
       }
     },
     "phaseBadge": "فاز {phase}",
-    "version": "نسخه"
+    "version": "نسخه",
+    "report": {
+      "title": "داشبورد مدیریتی",
+      "description": "شمارنده‌ها و تفکیک‌های وابسته به سطح دسترسی در سراسر سامانه.",
+      "loadError": "بارگذاری داشبورد ناموفق بود.",
+      "counters": {
+        "active_employees": "کارکنان فعال",
+        "catalog_items": "کالاهای کاتالوگ",
+        "open_item_requests": "درخواست‌های باز کالا",
+        "active_loans": "وام‌های فعال",
+        "unresolved_low_stock_alerts": "هشدارهای کمبود حل‌نشده",
+        "delivered_notifications": "اعلان‌های ارسال‌شده"
+      },
+      "requestsBreakdown": "درخواست‌های کالا بر اساس وضعیت",
+      "loansBreakdown": "وام‌ها بر اساس وضعیت",
+      "alertsBreakdown": "هشدارهای کمبود بر اساس انبار",
+      "requestStatus": {
+        "pending": "در انتظار",
+        "approved": "تأییدشده",
+        "rejected": "ردشده",
+        "fulfilled": "تأمین‌شده"
+      },
+      "loanStatus": {
+        "pending": "در انتظار",
+        "active": "فعال",
+        "settled": "تسویه‌شده",
+        "cancelled": "لغوشده"
+      }
+    }
   },
   "a11y": {
     "skipToContent": "پرش به محتوای اصلی"
@@ -707,6 +735,90 @@
       "LoanRequestSettled": "وام تسویه شد",
       "AssetAssigned": "دارایی واگذار شد",
       "AssetReturned": "دارایی بازگردانده شد"
+    }
+  },
+  "settings": {
+    "eyebrow": "سامانه",
+    "title": "تنظیمات",
+    "description": "تنظیمات سراسری سامانه — هر تغییر با کنترل نسخه و ثبت در ممیزی انجام می‌شود.",
+    "noAccess": "شما مجوز مشاهده تنظیمات سامانه را ندارید.",
+    "loadError": "بارگذاری تنظیمات ناموفق بود.",
+    "groups": {
+      "alerting": "هشدار کمبود موجودی",
+      "notifications": "گیرندگان اعلان",
+      "requests": "سیاست تأیید درخواست کالا",
+      "dashboard": "پیش‌فرض‌های داشبورد",
+      "flags": "پرچم‌های قابلیت"
+    },
+    "versionLabel": "نسخه {version}",
+    "enabled": "فعال",
+    "disabled": "غیرفعال",
+    "save": "ذخیره",
+    "saved": "ذخیره شد.",
+    "staleVersion": "این تنظیم جای دیگری تغییر کرده — مقدار فعلی بازخوانی شد؛ اصلاح و دوباره تلاش کنید.",
+    "invalidValue": "مقدار با نوع تنظیم همخوانی ندارد.",
+    "saveFailed": "ذخیره ناموفق بود — دوباره تلاش کنید.",
+    "auditNote": "هر تغییر در گزارش عملیات حساس ثبت می‌شود.",
+    "reportsLink": "مشاهده گزارش‌ها"
+  },
+  "reports": {
+    "eyebrow": "بینش",
+    "title": "گزارش‌ها",
+    "description": "نمای‌های قابل اعتماد و وابسته به سطح دسترسی همراه با خروجی اکسل.",
+    "noAccess": "شما مجوز مشاهده هیچ گزارشی را ندارید.",
+    "loadError": "بارگذاری گزارش ناموفق بود.",
+    "empty": "ردیفی مطابق فیلترهای فعلی یافت نشد.",
+    "tabsLabel": "زبانه‌های گزارش",
+    "tabs": {
+      "inventory": "موجودی",
+      "requests": "درخواست‌های کالا",
+      "loans": "وام‌ها",
+      "audit": "عملیات حساس"
+    },
+    "export": "اکسل",
+    "prevPage": "قبلی",
+    "nextPage": "بعدی",
+    "pageOf": "صفحه {page} از {pages}",
+    "filters": {
+      "belowMinOnly": "فقط کمتر از حد مجاز",
+      "all": "همه",
+      "statusLabel": "فیلتر وضعیت",
+      "actionPlaceholder": "فیلتر بر اساس عملیات…"
+    },
+    "status": {
+      "pending": "در انتظار",
+      "approved": "تأییدشده",
+      "rejected": "ردشده",
+      "fulfilled": "تأمین‌شده"
+    },
+    "statusCounts": "{pending} در انتظار · {approved} تأییدشده · {rejected} ردشده · {fulfilled} تأمین‌شده",
+    "inventory": {
+      "belowMin": "کمتر از حد",
+      "location": "{warehouse} · قفسه {shelf}",
+      "quantities": "{quantity} {unit} موجود · حد مجاز {threshold}",
+      "empty": "موجودی‌ای مطابق فیلترهای فعلی یافت نشد."
+    },
+    "requests": {
+      "requester": "{email}",
+      "lines": "{count, plural, one {# ردیف} other {# ردیف}}",
+      "status": {
+        "pending": "در انتظار",
+        "approved": "تأییدشده",
+        "rejected": "ردشده",
+        "fulfilled": "تأمین‌شده"
+      },
+      "empty": "درخواستی مطابق فیلترهای فعلی یافت نشد."
+    },
+    "loans": {
+      "year": "سال {year}",
+      "counts": "{total} کل · {pending} در انتظار · {active} فعال · {settled} تسویه‌شده · {cancelled} لغوشده",
+      "commitments": "تعهد فعال — وام {loan} · ضمانت {guarantee}",
+      "caps": "سقف سیاست — وام {loan} · ضمانت {guarantee}",
+      "noPolicy": "سیاست فعالی برای این سال وجود ندارد."
+    },
+    "audit": {
+      "entity": "{type}",
+      "empty": "مورد ممیزی مطابق فیلترهای فعلی یافت نشد."
     }
   }
 }
