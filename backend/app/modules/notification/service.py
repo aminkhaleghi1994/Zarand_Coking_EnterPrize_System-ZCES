@@ -2,7 +2,10 @@
 per-recipient notification rows — idempotent (the exactly-once unique),
 scope-driven recipients, deactivated recipients skipped, bounded retries,
 terminal failed/skipped statuses. Delivery failures never raise into the
-caller's business transaction (§20): the relay owns this transaction."""
+caller's business transaction (§20): the relay owns this transaction.
+
+Also the owner-facing inbox service (US3): strictly owner-scoped reads and
+idempotent mark-read transitions — a user's inbox is personal data."""
 
 import uuid
 from typing import Any
@@ -10,6 +13,7 @@ from typing import Any
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
+from app.core.errors import not_found
 from app.modules.notification import repository
 from app.modules.notification.models import EVENT_TYPES, EventOutbox, Notification
 from app.modules.user import contracts as user_contracts
@@ -109,3 +113,46 @@ def deliver_claimed_batch(
     for event in events:
         results.append((event, deliver_event(session, event)))
     return results
+
+
+# --- Owner-facing inbox (US3) ---
+
+
+def list_inbox(
+    session: Session,
+    user_id: uuid.UUID,
+    *,
+    page: int,
+    page_size: int,
+    unread_only: bool,
+) -> tuple[list[Notification], int]:
+    """Owner-scoped inbox page (newest first)."""
+    return repository.list_for_owner(
+        session,
+        user_id,
+        page=page,
+        page_size=page_size,
+        unread_only=unread_only,
+    )
+
+
+def unread_inbox_count(session: Session, user_id: uuid.UUID) -> int:
+    return repository.count_unread(session, user_id)
+
+
+def mark_notification_read(
+    session: Session, user_id: uuid.UUID, notification_id: uuid.UUID
+) -> Notification:
+    """Idempotent read stamp; foreign/missing ids are 404 (no leak)."""
+    notification = repository.get_for_owner(session, notification_id, user_id)
+    if notification is None:
+        raise not_found("Notification not found")
+    repository.mark_read(session, notification)
+    session.commit()
+    return notification
+
+
+def mark_inbox_all_read(session: Session, user_id: uuid.UUID) -> int:
+    marked = repository.mark_all_read(session, user_id)
+    session.commit()
+    return marked

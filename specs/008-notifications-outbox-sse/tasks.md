@@ -15,12 +15,12 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 [FND] `backend/app/common/bus.py`: in-process event bus — thread→asyncio bridge (subscribe per user_id, publish from threads, async wait with timeout); `backend/tests/test_bus.py`: publish/subscribe, per-user filtering, timeout path (research R5)
+- [x] T001 [FND] `backend/app/common/bus.py`: in-process event bus — thread→asyncio bridge (subscribe per user_id, publish from threads, async wait with timeout); `backend/tests/test_bus.py`: publish/subscribe, per-user filtering, timeout path (research R5)
 
 ## Phase 2: Foundational — models & migration (blocking)
 
-- [ ] T002 [FND] `backend/app/modules/notification/models.py`: `OutboxStatus`/`NotificationEventType` constants + `EventOutbox` (status CHECK, 13-type CHECK, claim index, actor/trace) + `Notification` (owner FK, outbox FK, exactly-once partial unique, unread + list indexes, read_at) per data-model.md; alembic `backend/alembic/versions/0008_notifications_outbox_sse.py`; verify reversible on local PG (data-model notes)
-- [ ] T003 [P] [FND] `backend/app/modules/notification/schemas.py`: `NotificationOut` (payload passthrough), `UnreadCountOut`, `MarkedOut`, payload builder helpers; `backend/tests/test_notification_schemas.py` fixtures (contracts)
+- [x] T002 [FND] `backend/app/modules/notification/models.py`: `OutboxStatus`/`NotificationEventType` constants + `EventOutbox` (status CHECK, 13-type CHECK, claim index, actor/trace) + `Notification` (owner FK, outbox FK, exactly-once partial unique, unread + list indexes, read_at) per data-model.md; alembic `backend/alembic/versions/0008_notifications_outbox_sse.py`; verify reversible on local PG (data-model notes)
+- [x] T003 [P] [FND] `backend/app/modules/notification/schemas.py`: `NotificationOut` (payload passthrough), `UnreadCountOut`, `MarkedOut`, payload builder helpers; `backend/tests/test_notification_schemas.py` fixtures (contracts)
 
 **Checkpoint**: migration reversible; bus proven.
 
@@ -30,8 +30,8 @@
 
 **Independent Test**: perform each mapped action → one outbox row; a rolled-back action → no row.
 
-- [ ] T004 [US1] `backend/app/modules/notification/contracts.py`: `record_event(session, event_type, payload, actor_user_id, critical=False)` + `deliver_critical(...)` + `CRITICAL_EVENTS` mapping (v1: InventoryLowStock); unit test: capture writes pending row in-session (research R1/R4)
-- [ ] T005 [US1] Wire capture into emitting services: employee+user creation (`UserCreated`, seed-exempt), catalog create, low-stock raise (+ critical in-transaction delivery), request create/approve/reject/fulfill, asset assign/return, loan create/activate/settle — each in the same transaction; test additions: event capture matrix + rollback case (refused fulfillment leaves no row) (FR-001, FR-003, SC-001, research R9)
+- [x] T004 [US1] `backend/app/modules/notification/contracts.py`: `record_event(session, event_type, payload, actor_user_id, critical=False)` + `deliver_critical(...)` + `CRITICAL_EVENTS` mapping (v1: InventoryLowStock); unit test: capture writes pending row in-session (research R1/R4)
+- [x] T005 [US1] Wire capture into emitting services: employee+user creation (`UserCreated`, seed-exempt), catalog create, low-stock raise (+ critical in-transaction delivery), request create/approve/reject/fulfill, asset assign/return, loan create/activate/settle — each in the same transaction; test additions: event capture matrix + rollback case (refused fulfillment leaves no row) (FR-001, FR-003, SC-001, research R9)
   - **Deferred (decided 2026-09-01)**: `ItemReturned` has no emitting business
     action in the current product surface (no return-to-stock flow exists; the
     only return flow is asset returns, which emit `AssetReturned`). The type
@@ -46,9 +46,9 @@
 
 **Independent Test**: submit a request → requester notification within relay latency; forced failure → retry; restart replay → no duplicates.
 
-- [ ] T006 [US2] `backend/app/modules/user/contracts.py`: `get_recipient_user_ids(session, permission_code, workplace_id)` (active users whose scopes cover the unit, implicit deny); contract tests (research R3)
-- [ ] T007 [US2] `backend/app/modules/notification/service.py`: `deliver_event` — claim-aware delivery, per-event recipient mapping (R3 table), idempotent inserts (partial unique), deactivated-recipient skip, bounded retries (≤5) + terminal `failed`/`skipped`, unknown event type → immediate `failed`; test additions: delivery matrix, duplicate-replay safety, deactivated skip, unknown-type terminal failure (FR-004, FR-005, FR-006, SC-002)
-- [ ] T008 [US2] `backend/app/modules/notification/relay.py`: lifespan-managed daemon thread — poll 2s, claim ≤ 50 via SKIP LOCKED, deliver, publish to bus, re-claim orphaned `processing` on startup; test additions: end-to-end outbox→notification within latency, restart redelivery without duplicates (FR-004, SC-002, SC-003, research R2)
+- [x] T006 [US2] `backend/app/modules/user/contracts.py`: `get_recipient_user_ids(session, permission_code, workplace_id)` (active users whose scopes cover the unit, implicit deny); contract tests (research R3)
+- [x] T007 [US2] `backend/app/modules/notification/service.py`: `deliver_event` — claim-aware delivery, per-event recipient mapping (R3 table), idempotent inserts (partial unique), deactivated-recipient skip, bounded retries (≤5) + terminal `failed`/`skipped`, unknown event type → immediate `failed`; test additions: delivery matrix, duplicate-replay safety, deactivated skip, unknown-type terminal failure (FR-004, FR-005, FR-006, SC-002)
+- [x] T008 [US2] `backend/app/modules/notification/relay.py`: lifespan-managed daemon thread — poll 2s, claim ≤ 50 via SKIP LOCKED, deliver, publish to bus, re-claim orphaned `processing` on startup; test additions: end-to-end outbox→notification within latency, restart redelivery without duplicates (FR-004, SC-002, SC-003, research R2)
 
 **Checkpoint**: the relay delivers live; failures never break anything.
 
@@ -58,8 +58,8 @@
 
 **Independent Test**: open stream → deliver an event → SSE frame arrives; unauthenticated → denied.
 
-- [ ] T009 [US3] `router.py`: `GET /notifications/stream` (async generator over the bus + keep-alive comments, Bearer-auth, owner filter only) + endpoint tests: 401 unauthenticated, frame on delivery, foreign-user filtering (FR-007, SC-003)
-- [ ] T010 [P] [US3] `backend/app/modules/notification/router.py` REST endpoints: `GET /notifications` (page, unread_only), `GET /unread-count`, `POST /{id}/read`, `POST /read-all` — owner-scoped; endpoint tests: pagination, unread filtering, idempotent read, read-all, foreign 404 (FR-008)
+- [x] T009 [US3] `router.py`: `GET /notifications/stream` (async generator over the bus + keep-alive comments, Bearer-auth, owner filter only) + endpoint tests: 401 unauthenticated, frame on delivery, foreign-user filtering (FR-007, SC-003)
+- [x] T010 [P] [US3] `backend/app/modules/notification/router.py` REST endpoints: `GET /notifications` (page, unread_only), `GET /unread-count`, `POST /{id}/read`, `POST /read-all` — owner-scoped; endpoint tests: pagination, unread filtering, idempotent read, read-all, foreign 404 (FR-008)
 
 **Checkpoint**: live stream + inbox API proven; Phase gate (browser) pending UI.
 
