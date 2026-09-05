@@ -3,6 +3,47 @@
 All notable changes to this project are documented here. The format is based
 on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.8.0] - 2026-09-05
+
+### Added
+- Notifications, event outbox & live SSE (Phase 8): every mapped §20
+  business action captures its event in the same transaction
+  (`record_event` → append-only `EventOutbox` row; rollback-proof — a
+  refused action leaves no row); a lifespan-managed relay thread polls
+  every 2s, claims ≤ 50 pending events with `FOR UPDATE SKIP LOCKED`,
+  resolves scope-driven recipients (explicit users + permission-covered
+  holders, implicit deny, deactivated recipients skipped), and inserts
+  per-recipient notifications exactly-once (partial unique
+  `(outbox_event_id, user_id)`) with bounded retries (≤ 5 attempts, 2s
+  backoff, terminal `failed`/`skipped`, startup reclaim of orphaned
+  `processing` rows). Delivery failures never raise into business
+  transactions. `InventoryLowStock` is Critical (v1): its in-app rows are
+  written by `deliver_critical` in the alert's own commit, so the
+  notification exists the moment the alert does
+- Live per-user SSE stream `GET /notifications/stream` (Bearer auth,
+  `event: notification` frames forwarded verbatim from the relay via the
+  in-process thread→asyncio bus, `: keep-alive` comments every 15s,
+  `X-Accel-Buffering: no`) plus the owner-scoped inbox REST endpoints
+  (`GET /notifications` newest-first paginated with `unread_only`,
+  `GET /notifications/unread-count`, `POST /{id}/read` idempotent,
+  `POST /read-all`) — a user's inbox is personal data (authentication
+  only, no RBAC); foreign ids 404 without existence leaks
+- BFF routes `/api/notifications/**` including a streaming SSE passthrough
+  (session cookie → Bearer, client disconnect propagates upstream, no read
+  timeout) and the `notificationApi` client with types; bilingual
+  `notifications.*` namespaces (en/fa) with per-event descriptions for all
+  13 event types
+- Notification inbox UI: header bell with live unread badge (EventSource
+  on mount → query invalidation), newest-first panel with per-event
+  bilingual descriptions, payload body lines, Jalali dates in `fa`,
+  mark-one/mark-all read, skeletons, empty state, Escape/outside close,
+  responsive and reduced-motion aware
+- Migration `0008_notifications_outbox_sse` (2 tables: `event_outbox`,
+  `notifications`; status + 13-type CHECKs, claim index, unread/list
+  indexes, exactly-once partial unique — reversible)
+- Smoke-test notifications section (critical low-stock rows in the same
+  commit, mark-read + read-all, relay latency for non-critical delivery)
+
 ## [0.7.0] - 2026-09-01
 
 ### Added

@@ -7,18 +7,32 @@ Cross-module consumers import ONLY from this file — never from
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.orm import Session
 
-from app.modules.user.models import Company, Complex, Employee, User, Workplace
+from app.modules.user.models import (
+    Company,
+    Complex,
+    Employee,
+    Permission,
+    RolePermission,
+    ScopeAssignment,
+    ScopeLevel,
+    User,
+    UserRole,
+    Workplace,
+)
 
 __all__ = [
     "EmployeeHolderView",
     "RequesterAnchorView",
     "WorkplaceParentsView",
     "get_employee_holder",
+    "get_recipient_user_ids",
+    "get_user_id_for_employee",
     "get_user_workplace_anchor",
     "get_workplace_with_parents",
+    "filter_active_user_ids",
 ]
 
 
@@ -177,3 +191,69 @@ def get_loan_requester(session: Session, user_id: uuid.UUID) -> LoanRequesterVie
         workplace_id=workplace.id,
         is_active=employee.is_active,
     )
+
+
+def get_user_id_for_employee(session: Session, employee_id: uuid.UUID) -> uuid.UUID | None:
+    """Linked account id of an employee (employee↔user is 1:1), or None when
+    the employee has no user account (never the case for created pairs, but
+    guards against partial data)."""
+    return session.scalar(select(User.id).where(User.employee_id == employee_id))
+
+
+def filter_active_user_ids(
+    session: Session, user_ids: list[uuid.UUID]
+) -> list[uuid.UUID]:
+    """The subset of the given ids whose accounts are active (delivery-time
+    skip rule for deactivated recipients, spec edge case 2)."""
+    if not user_ids:
+        return []
+    rows = session.execute(
+        select(User.id).where(
+            User.id.in_(user_ids), User.is_active.is_(True), User.deleted_at.is_(None)
+        )
+    ).all()
+    return [row[0] for row in rows]
+
+
+def get_recipient_user_ids(
+    session: Session, permission_code: str, workplace_id: uuid.UUID | None
+) -> list[uuid.UUID]:
+    """Active users whose scope assignments cover the workplace for the
+    permission code (implicit deny — research R3). Global/complex/workplace
+    scopes union; deactivated users and those without the role holding the
+    permission are excluded. ``workplace_id=None`` matches global-level
+    assignments only (unanchored events notify globally-scoped holders)."""
+    module, resource, operation = permission_code.split(":", 2)
+    conditions: list[ColumnElement[bool]] = [
+        User.is_active.is_(True),
+        User.deleted_at.is_(None),
+        Permission.code == permission_code,
+        ScopeAssignment.module == module,
+        ScopeAssignment.resource == resource,
+        ScopeAssignment.operation == operation,
+    ]
+    if workplace_id is None:
+        conditions.append(ScopeAssignment.level == ScopeLevel.GLOBAL)
+    else:
+        workplace = session.get(Workplace, workplace_id)
+        if workplace is None:
+            return []
+        conditions.append(
+            or_(
+                ScopeAssignment.level == ScopeLevel.GLOBAL,
+                (ScopeAssignment.level == ScopeLevel.COMPLEX)
+                & (ScopeAssignment.complex_id == workplace.complex_id),
+                (ScopeAssignment.level == ScopeLevel.WORKPLACE)
+                & (ScopeAssignment.workplace_id == workplace.id),
+            )
+        )
+    rows = session.execute(
+        select(User.id)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(RolePermission, RolePermission.role_id == UserRole.role_id)
+        .join(Permission, Permission.id == RolePermission.permission_id)
+        .join(ScopeAssignment, ScopeAssignment.user_id == User.id)
+        .where(*conditions)
+        .distinct()
+    ).all()
+    return [row[0] for row in rows]

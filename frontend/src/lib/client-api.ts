@@ -572,6 +572,55 @@ export const loanApi = {
   },
 };
 
+export type NotificationPayload = {
+  entity_id?: string;
+  title?: string;
+  body?: string | null;
+  [key: string]: unknown;
+};
+
+export type NotificationRecord = {
+  id: string;
+  event_type: string;
+  payload: NotificationPayload;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type UnreadCount = { unread: number };
+
+export type NotificationListParams = {
+  page?: number;
+  pageSize?: number;
+  unreadOnly?: boolean;
+};
+
+export const notificationApi = {
+  list: (params: NotificationListParams, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+    if (params.page) query.set("page", String(params.page));
+    if (params.pageSize) query.set("page_size", String(params.pageSize));
+    if (params.unreadOnly) query.set("unread_only", "true");
+    const raw = query.toString();
+    return bffFetch<Page<NotificationRecord>>(
+      `/api/notifications${raw ? `?${raw}` : ""}`,
+      { signal },
+    );
+  },
+  unreadCount: (signal?: AbortSignal) =>
+    bffFetch<UnreadCount>("/api/notifications/unread-count", { signal }),
+  markRead: (id: string) =>
+    bffFetch<NotificationRecord>(`/api/notifications/${id}/read`, {
+      method: "POST",
+      body: {},
+    }),
+  markAllRead: () =>
+    bffFetch<{ marked: number }>("/api/notifications/read-all", {
+      method: "POST",
+      body: {},
+    }),
+};
+
 export const requestApi = {
   list: (
     status: "all" | "pending" | "approved" | "rejected" | "fulfilled",

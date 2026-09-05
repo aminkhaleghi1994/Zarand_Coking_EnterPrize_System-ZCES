@@ -15,6 +15,7 @@ from app.core.errors import (
 )
 from app.core.security import hash_password
 from app.modules.audit.contracts import write_audit
+from app.modules.notification import contracts as notification_contracts
 from app.modules.user import employee_repository, org_repository
 from app.modules.user.models import Complex, Employee, User, Workplace
 from app.modules.user.schemas import (
@@ -182,6 +183,25 @@ def create_employee_with_user(
             }
         ),
         critical=True,
+    )
+    notification_contracts.record_event(
+        session,
+        "UserCreated",
+        {
+            "entity_id": str(employee.id),
+            "actor_user_id": str(uuid.UUID(context.user_id)),
+            "title": "user_created",
+            "user_id": str(user.id),
+            "workplace_id": str(workplace.id),
+            "employee_name": f"{employee.first_name} {employee.last_name}".strip(),
+            "audience": {
+                "scope": {
+                    "permission": "user:employee:read",
+                    "workplace_id": str(workplace.id),
+                }
+            },
+        },
+        actor_user_id=uuid.UUID(context.user_id),
     )
     session.commit()
     return employee

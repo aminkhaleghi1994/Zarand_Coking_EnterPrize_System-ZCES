@@ -35,6 +35,7 @@ from app.modules.loan.schemas import (
     format_money,
     parse_money,
 )
+from app.modules.notification import contracts as notification_contracts
 from app.modules.user import contracts as user_contracts
 from app.modules.user.models import Workplace
 
@@ -365,6 +366,28 @@ def submit_request(
         after=_request_snapshot(request),
         critical=True,
     )
+    notification_contracts.record_event(
+        session,
+        "LoanRequestCreated",
+        {
+            "entity_id": str(request.id),
+            "actor_user_id": str(uuid.UUID(context.user_id)),
+            "title": "loan_created",
+            "loan_type": loan_type.value,
+            "amount": format_money(request.amount),
+            "workplace_id": str(requester.workplace_id),
+            "employee_id": str(requester.employee_id),
+            "requester_user_id": str(uuid.UUID(context.user_id)),
+            "audience": {
+                "users": [str(uuid.UUID(context.user_id))],
+                "scope": {
+                    "permission": "loan:request:read",
+                    "workplace_id": str(requester.workplace_id),
+                },
+            },
+        },
+        actor_user_id=uuid.UUID(context.user_id),
+    )
     session.commit()
     session.refresh(request)
     return request
@@ -387,6 +410,39 @@ def _load_request_for_transition(
     if not in_scope:
         raise not_found("Loan request not found")
     return request
+
+
+def _record_lifecycle_event(
+    session: Session, request: LoanRequest, event_type: str, title: str, actor: str
+) -> None:
+    """Loan lifecycle capture (research R3): the requester plus loan-read
+    scope holders on the request's workplace, resolved through the user
+    module's contracts only."""
+    requester_user_id = user_contracts.get_user_id_for_employee(session, request.employee_id)
+    if requester_user_id is None:
+        return
+    notification_contracts.record_event(
+        session,
+        event_type,
+        {
+            "entity_id": str(request.id),
+            "actor_user_id": actor,
+            "title": title,
+            "loan_type": str(request.type.value),
+            "amount": format_money(request.amount),
+            "workplace_id": str(request.workplace_id),
+            "employee_id": str(request.employee_id),
+            "requester_user_id": str(requester_user_id),
+            "audience": {
+                "users": [str(requester_user_id)],
+                "scope": {
+                    "permission": "loan:request:read",
+                    "workplace_id": str(request.workplace_id),
+                },
+            },
+        },
+        actor_user_id=uuid.UUID(actor),
+    )
 
 
 def activate_request(
@@ -423,6 +479,9 @@ def activate_request(
         after=_request_snapshot(request),
         critical=True,
     )
+    _record_lifecycle_event(
+        session, request, "LoanRequestActivated", "loan_activated", context.user_id
+    )
     session.commit()
     session.refresh(request)
     return request
@@ -455,6 +514,9 @@ def settle_request(
         before=before,
         after=_request_snapshot(request),
         critical=True,
+    )
+    _record_lifecycle_event(
+        session, request, "LoanRequestSettled", "loan_settled", context.user_id
     )
     session.commit()
     session.refresh(request)

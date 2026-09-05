@@ -40,6 +40,7 @@ Thumbs.db
 # Only local/secret artifacts are ignored:
 .opencode/auth.json
 .opencode/*.local.*
+opencode.json
 
 # ===== Misc =====
 coverage/

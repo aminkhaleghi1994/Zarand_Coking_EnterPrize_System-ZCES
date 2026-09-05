@@ -24,6 +24,7 @@ from app.core.errors import (
     validation_error,
 )
 from app.modules.audit.contracts import write_audit
+from app.modules.notification import contracts as notification_contracts
 from app.modules.user import contracts as user_contracts
 from app.modules.warehouse import repository, request_repository
 from app.modules.warehouse.models import ItemRequest, RequestStatus, Warehouse
@@ -140,6 +141,26 @@ def create_request(
         after=_request_snapshot(request, line_snapshots),
         critical=True,
     )
+    notification_contracts.record_event(
+        session,
+        "ItemRequestCreated",
+        {
+            "entity_id": str(request.id),
+            "actor_user_id": str(caller),
+            "title": "request_created",
+            "workplace_id": str(request.workplace_id) if request.workplace_id else None,
+            "requester_user_id": str(caller),
+            "line_count": len(line_snapshots),
+            "audience": {
+                "users": [str(caller)],
+                "scope": {
+                    "permission": _REQUEST_DECIDE,
+                    "workplace_id": str(request.workplace_id) if request.workplace_id else None,
+                },
+            },
+        },
+        actor_user_id=caller,
+    )
     session.commit()
     return request
 
@@ -198,6 +219,26 @@ def decide_request(
         before=before,
         after=_request_snapshot(request, line_snapshots),
         critical=True,
+    )
+    audience: dict[str, object] = {"users": [str(request.requested_by)]}
+    if approve:
+        audience["scope"] = {
+            "permission": _REQUEST_FULFILL,
+            "workplace_id": str(request.workplace_id) if request.workplace_id else None,
+        }
+    notification_contracts.record_event(
+        session,
+        "ItemRequestApproved" if approve else "ItemRequestRejected",
+        {
+            "entity_id": str(request.id),
+            "actor_user_id": str(uuid.UUID(context.user_id)),
+            "title": "request_approved" if approve else "request_rejected",
+            "workplace_id": str(request.workplace_id) if request.workplace_id else None,
+            "requester_user_id": str(request.requested_by),
+            "decision_note": payload.note,
+            "audience": audience,
+        },
+        actor_user_id=uuid.UUID(context.user_id),
     )
     session.commit()
     return request
@@ -297,6 +338,20 @@ def fulfill_request(
         before=before,
         after={**_request_snapshot(request, line_snapshots), "movements": movements},
         critical=True,
+    )
+    notification_contracts.record_event(
+        session,
+        "ItemRequestFulfilled",
+        {
+            "entity_id": str(request.id),
+            "actor_user_id": str(uuid.UUID(context.user_id)),
+            "title": "request_fulfilled",
+            "workplace_id": str(request.workplace_id) if request.workplace_id else None,
+            "requester_user_id": str(request.requested_by),
+            "line_count": len(movements),
+            "audience": {"users": [str(request.requested_by)]},
+        },
+        actor_user_id=uuid.UUID(context.user_id),
     )
     session.commit()
     return request

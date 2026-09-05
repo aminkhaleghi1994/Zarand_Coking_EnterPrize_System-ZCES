@@ -27,6 +27,7 @@ from app.core.errors import (
     validation_error,
 )
 from app.modules.audit.contracts import write_audit
+from app.modules.notification import contracts as notification_contracts
 from app.modules.user import contracts as user_contracts
 from app.modules.warehouse import repository
 from app.modules.warehouse.models import InventoryPlacement, ItemCatalog, Shelf, Warehouse
@@ -143,6 +144,24 @@ def create_item(session: Session, context: ScopeContext, payload: ItemCreateIn) 
         actor_user_id=uuid.UUID(context.user_id),
         after=_item_snapshot(item),
         critical=True,
+    )
+    anchor = user_contracts.get_user_workplace_anchor(session, uuid.UUID(context.user_id))
+    notification_contracts.record_event(
+        session,
+        "ItemCatalogCreated",
+        {
+            "entity_id": str(item.id),
+            "actor_user_id": str(uuid.UUID(context.user_id)),
+            "title": "item_created",
+            "item_name": item.name,
+            "audience": {
+                "scope": {
+                    "permission": "warehouse:item:read",
+                    "workplace_id": str(anchor.workplace_id) if anchor else None,
+                }
+            },
+        },
+        actor_user_id=uuid.UUID(context.user_id),
     )
     session.commit()
     return item
@@ -610,7 +629,12 @@ def _placement_movement_snapshot(
     }
 
 
-def _evaluate_alert(session: Session, placement: InventoryPlacement, item: ItemCatalog) -> None:
+def _evaluate_alert(
+    session: Session,
+    placement: InventoryPlacement,
+    item: ItemCatalog,
+    actor_user_id: uuid.UUID | None,
+) -> None:
     """Episode semantics (spec FR-016/FR-017, research R7): raise one active
     alert per below-threshold episode; resolve on recovery; audited in the
     same transaction as the movement that caused the transition."""
@@ -632,6 +656,40 @@ def _evaluate_alert(session: Session, placement: InventoryPlacement, item: ItemC
         )
         session.add(alert)
         session.flush()
+        warehouse = session.get(Warehouse, session.get(Shelf, placement.shelf_id).warehouse_id)  # type: ignore[union-attr]
+        workplace_id = warehouse.workplace_id if warehouse else None
+        event = notification_contracts.record_event(
+            session,
+            "InventoryLowStock",
+            {
+                "entity_id": str(alert.id),
+                "actor_user_id": str(actor_user_id) if actor_user_id else None,
+                "title": "low_stock",
+                "body": (
+                    f"{item.name} below threshold at {warehouse.name}"
+                    if warehouse
+                    else f"{item.name} below threshold"
+                ),
+                "item_id": str(item.id),
+                "item_name": item.name,
+                "placement_id": str(placement.id),
+                "workplace_id": str(workplace_id) if workplace_id else None,
+                "quantity_at_alert": format_quantity(placement.quantity),
+                "threshold_at_alert": format_quantity(item.min_quantity),
+                "audience": {
+                    "scope": {
+                        "permission": "warehouse:stock:read",
+                        "workplace_id": str(workplace_id),
+                    }
+                },
+            },
+            actor_user_id=actor_user_id,
+        )
+        if workplace_id is not None:
+            recipients = user_contracts.get_recipient_user_ids(
+                session, "warehouse:stock:read", workplace_id
+            )
+            notification_contracts.deliver_critical(session, event, recipients)
         write_audit(
             session,
             action="STOCK_ALERT_RAISED",
@@ -752,7 +810,7 @@ def receive_stock(
         reason=payload.reason,
         actor_user_id=uuid.UUID(context.user_id),
     )
-    _evaluate_alert(session, placement, item)
+    _evaluate_alert(session, placement, item, uuid.UUID(context.user_id))
     write_audit(
         session,
         action="STOCK_RECEIVED",
@@ -807,7 +865,7 @@ def issue_stock(
         reason=payload.reason,
         actor_user_id=uuid.UUID(context.user_id),
     )
-    _evaluate_alert(session, placement, item)
+    _evaluate_alert(session, placement, item, uuid.UUID(context.user_id))
     write_audit(
         session,
         action="STOCK_ISSUED",
@@ -857,7 +915,7 @@ def adjust_stock(
         reason=payload.reason,
         actor_user_id=uuid.UUID(context.user_id),
     )
-    _evaluate_alert(session, placement, item)
+    _evaluate_alert(session, placement, item, uuid.UUID(context.user_id))
     write_audit(
         session,
         action="STOCK_ADJUSTED",

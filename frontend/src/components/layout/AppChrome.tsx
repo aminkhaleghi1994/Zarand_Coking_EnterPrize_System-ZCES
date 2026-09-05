@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { SidebarNav } from "@/components/layout/SidebarNav";
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { NotificationBell } from "@/features/notifications/NotificationPanel";
 import { Link } from "@/i18n/navigation";
 
 export type ChromeIdentity = {
@@ -43,7 +44,8 @@ export function AppChrome({
           <ThemeToggle tone="dark" />
           <LocaleSwitcher tone="dark" />
           {identity ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <NotificationBell />
               <span className="hidden max-w-48 truncate text-white/90 md:inline" title={identity.email}>
                 {identity.email}
               </span>
