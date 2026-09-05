@@ -803,6 +803,7 @@ Check "reports: Excel export returns workbook bytes + filename" {
     $handler = New-Object System.Net.Http.HttpClientHandler
     $handler.UseCookies = $false
     $client = New-Object System.Net.Http.HttpClient($handler)
+    $client.Timeout = [TimeSpan]::FromSeconds(30)  # bounded: never hang the gate
     try {
         $request = New-Object System.Net.Http.HttpRequestMessage("GET", "$frontendOrigin/api/reports/export?report=inventory&page_size=100")
         $request.Headers.TryAddWithoutValidation("Cookie", (Get-CookiesFromJar $script:jar)) | Out-Null
@@ -818,9 +819,17 @@ Check "reports: Excel export returns workbook bytes + filename" {
         $client.Dispose(); $handler.Dispose()
     }
 
-    # unauthenticated export denied
-    $unauth = Invoke-WebRequest -Uri "$frontendOrigin/api/reports/export?report=inventory" -UseBasicParsing -SkipHttpErrorCheck
-    Assert-True ($unauth.StatusCode -eq 401) "unauthenticated export should 401, got $($unauth.StatusCode)"
+    # unauthenticated export denied (PS 5.1: 4xx raises — catch and read the status)
+    $unauthStatus = 0
+    try {
+        $null = Invoke-WebRequest -Uri "$frontendOrigin/api/reports/export?report=inventory" -UseBasicParsing -TimeoutSec 15
+        $unauthStatus = 200
+    }
+    catch {
+        if ($_.Exception.Response) { $unauthStatus = [int]$_.Exception.Response.StatusCode }
+        else { $unauthStatus = 0 }
+    }
+    Assert-True ($unauthStatus -eq 401) "unauthenticated export should 401, got $unauthStatus"
 }
 
 Write-Host ""
