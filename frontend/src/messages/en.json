@@ -143,10 +143,163 @@
       "generic": "The operation failed. Please try again."
     }
   },
+  "warehouse": {
+    "eyebrow": "Warehouse",
+    "title": "Warehouse & Inventory",
+    "description": "Item catalog, shelf placements, stock movements and low-stock alerts.",
+    "tabsLabel": "Warehouse sections",
+    "tabs": {
+      "catalog": "Item Catalog",
+      "warehouses": "Warehouses",
+      "stock": "Stock",
+      "alerts": "Low Stock"
+    },
+    "catalog": {
+      "searchPlaceholder": "Search items by name or code…",
+      "createTitle": "New item",
+      "editTitle": "Edit item",
+      "empty": "No items yet — define the first catalog item.",
+      "searchHint": "Type at least a few characters to search.",
+      "noResults": "No matching items.",
+      "clearSelection": "Clear",
+      "pageIndicator": "Page {page} of {totalPages}",
+      "previousPage": "Previous",
+      "nextPage": "Next",
+      "retireTitle": "Retire item",
+      "retireDescription": "Retire \"{name}\"? Its name and code become reusable and it disappears from search and pickers.",
+      "form": {
+        "name": "Name (English)",
+        "nameFa": "Name (Persian)",
+        "code": "Item code (SKU, optional)",
+        "unit": "Unit of measure",
+        "minQuantity": "Minimum quantity",
+        "description": "Description",
+        "save": "Save",
+        "saving": "Saving…",
+        "cancel": "Cancel"
+      },
+      "table": {
+        "name": "Item",
+        "code": "Code",
+        "unit": "Unit",
+        "minQuantity": "Minimum",
+        "actions": "Actions",
+        "edit": "Edit",
+        "retire": "Retire"
+      }
+    },
+    "warehouses": {
+      "createTitle": "New warehouse",
+      "editTitle": "Edit warehouse",
+      "manageShelves": "Shelves",
+      "empty": "No warehouses in your scope yet.",
+      "form": {
+        "workplace": "Workplace",
+        "workplacePlaceholder": "Select a workplace…",
+        "code": "Code",
+        "name": "Name (English)",
+        "nameFa": "Name (Persian)",
+        "save": "Save",
+        "saving": "Saving…",
+        "cancel": "Cancel"
+      },
+      "table": {
+        "edit": "Edit",
+        "retire": "Retire"
+      },
+      "shelves": {
+        "sectionTitle": "Shelves",
+        "codePlaceholder": "Shelf code",
+        "add": "Add shelf",
+        "retire": "Retire",
+        "empty": "No shelves yet."
+      }
+    },
+    "stock": {
+      "searchPlaceholder": "Search placements by item…",
+      "receiveTitle": "Receive stock",
+      "issueTitle": "Issue",
+      "adjustTitle": "Adjust",
+      "historyTitle": "History",
+      "includeEmpty": "Include empty placements",
+      "empty": "No stock placements in your scope yet.",
+      "pageIndicator": "Page {page} of {totalPages}",
+      "previousPage": "Previous",
+      "nextPage": "Next",
+      "table": {
+        "item": "Item",
+        "shelf": "Shelf",
+        "warehouse": "Warehouse",
+        "quantity": "Quantity",
+        "actions": "Actions"
+      },
+      "dialog": {
+        "item": "Item",
+        "warehouse": "Warehouse",
+        "warehousePlaceholder": "Select a warehouse…",
+        "shelf": "Shelf",
+        "shelfPlaceholder": "Select a shelf…",
+        "quantity": "Quantity",
+        "countedQuantity": "Counted quantity",
+        "reason": "Reason / reference (optional)",
+        "target": "{item} on shelf {shelf} — current {quantity}",
+        "submit": "Record",
+        "saving": "Recording…",
+        "cancel": "Cancel"
+      },
+      "history": {
+        "title": "Movement history",
+        "subtitle": "{item} on shelf {shelf} — current {quantity}",
+        "types": {
+          "receive": "Receive",
+          "issue": "Issue",
+          "adjust": "Adjust"
+        },
+        "close": "Close",
+        "empty": "No movements recorded yet."
+      }
+    },
+    "alerts": {
+      "filterLabel": "Alert status filter",
+      "filter": {
+        "true": "Active",
+        "false": "Resolved",
+        "all": "All"
+      },
+      "activeBadge": "Active",
+      "resolved": "Resolved {date}",
+      "location": "{warehouse} · shelf {shelf}",
+      "quantities": "At alert {quantityAtAlert} · threshold {threshold} · now {current}",
+      "raisedAt": "Raised {date}",
+      "empty": "No low-stock alerts — shelves are above their thresholds."
+    },
+    "errors": {
+      "INSUFFICIENT_STOCK": "Not enough stock on this placement — check the available quantity.",
+      "BUSINESS_RULE_VIOLATION": "This operation is blocked while stock remains on the shelves.",
+      "DUPLICATE_RESOURCE": "A duplicate record already exists (item name or code).",
+      "VALIDATION_ERROR": "Please fix the highlighted fields and try again.",
+      "AUTHORIZATION_DENIED": "You do not have access to this operation.",
+      "STALE_VERSION": "This record changed since you opened it — refresh and retry.",
+      "CONFLICT_CONCURRENT_UPDATE": "Someone else updated this record — refresh and retry.",
+      "RESOURCE_NOT_FOUND": "The requested record was not found.",
+      "AUTHENTICATION_REQUIRED": "Please sign in first.",
+      "INTERNAL_ERROR": "Something went wrong. Please try again.",
+      "generic": "The operation failed. Please try again."
+    },
+    "validation": {
+      "nameRequired": "Name is required (max 200 characters).",
+      "nameFaRequired": "Persian name is required (max 200 characters).",
+      "codeTooLong": "Item code must be at most 50 characters.",
+      "unitRequired": "Unit of measure is required (max 30 characters).",
+      "minQuantityInvalid": "Minimum quantity must be a non-negative number with up to 3 decimals.",
+      "descriptionTooLong": "Description must be at most 1000 characters."
+    }
+  },
   "admin": {
     "eyebrow": "Administration",
     "title": "Access Control",
     "description": "Manage roles, review the permission catalog and assign user access.",
+    "tabsLabel": "Administration sections",
     "tabs": {
       "roles": "Roles",
       "permissions": "Permissions",

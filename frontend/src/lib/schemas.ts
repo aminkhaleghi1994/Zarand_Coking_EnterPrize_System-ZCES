@@ -72,3 +72,35 @@ export const LoginInputSchema = z.object({
   email: z.email("login.errors.emailInvalid"),
   password: z.string().min(8, "login.errors.passwordShort"),
 });
+
+export const WarehouseItemInputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "warehouse.validation.nameRequired")
+    .max(200, "warehouse.validation.nameRequired"),
+  name_fa: z
+    .string()
+    .trim()
+    .min(1, "warehouse.validation.nameFaRequired")
+    .max(200, "warehouse.validation.nameFaRequired"),
+  code: z
+    .string()
+    .trim()
+    .max(50, "warehouse.validation.codeTooLong")
+    .optional()
+    .nullable(),
+  unit: z
+    .string()
+    .trim()
+    .min(1, "warehouse.validation.unitRequired")
+    .max(30, "warehouse.validation.unitRequired"),
+  min_quantity: z.string().regex(/^\d+(\.\d{1,3})?$/, "warehouse.validation.minQuantityInvalid"),
+  description: z
+    .string()
+    .max(1000, "warehouse.validation.descriptionTooLong")
+    .optional()
+    .nullable(),
+});
+
+export type WarehouseItemInput = z.infer<typeof WarehouseItemInputSchema>;

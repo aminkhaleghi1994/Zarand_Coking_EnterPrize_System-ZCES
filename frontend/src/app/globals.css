@@ -209,6 +209,38 @@
 }
 
 /*
+ * Responsive data tables (DESIGN.md): below 768px a table row becomes a
+ * card; each cell shows its `data-label` so no header row is needed.
+ * Opt in per table with the `responsive-table` class.
+ */
+@media (max-width: 767px) {
+  .responsive-table thead {
+    display: none;
+  }
+  .responsive-table tbody tr {
+    display: grid;
+    gap: 0.25rem;
+    border: 1px solid var(--fog);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .responsive-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: none;
+    padding: 0.15rem 0;
+  }
+  .responsive-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--graphite);
+  }
+}
+
+/*
  * Respect the user's reduced-motion preference: collapse all animation and
  * transition durations so nothing non-essential moves (constitution V).
  */

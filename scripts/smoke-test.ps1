@@ -1,4 +1,4 @@
-# ZCES phase-gate smoke test (Foundation Skeleton)
+﻿# ZCES phase-gate smoke test (Foundation Skeleton)
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
 # Exits 0 only when every check passes.
 $ErrorActionPreference = "Stop"
@@ -312,6 +312,82 @@ Check "employee create + duplicate rejection + deactivate cascade" {
     Assert-True ($deact.Status -eq 200) "deactivate failed: $($deact.Status)"
     $empLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $email; password = "smoke-password-1" } $null
     Assert-True ($empLogin.Status -eq 401) "deactivated employee could still sign in"
+}
+
+# --- Warehouse flow (Phase 4, T032) ---
+
+Check "warehouse: catalog create + duplicate rejection" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Assert-True ($adminLogin.Status -eq 200) "admin login failed"
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+    $created = Invoke-BffJson "POST" "/api/warehouse/items" @{
+        name = "Smoke bearing $unique"; name_fa = "Smoke bearing FA $unique"; code = "SMK-$unique";
+        unit = "ad"; min_quantity = "10"
+    } $headers
+    Assert-True ($created.Status -eq 201) "item create failed: $($created.Status) $($created.Body)"
+    $duplicate = Invoke-BffJson "POST" "/api/warehouse/items" @{
+        name = "smoke BEARING $unique"; name_fa = "Smoke bearing FA $unique"; code = "OTHER-$unique";
+        unit = "ad"; min_quantity = "0"
+    } $headers
+    Assert-True ($duplicate.Status -eq 409) "expected duplicate 409, got $($duplicate.Status)"
+}
+
+Check "warehouse: receive/issue/overdraw ledger + low-stock alert" {
+    $adminLogin = Invoke-BffJson "POST" "/api/auth/login" @{ email = $script:adminEmail; password = $script:adminPassword } $null
+    Update-JarFromCookies $script:jar $adminLogin.SetCookies
+    $headers = @{ Cookie = Get-CookiesFromJar $script:jar; "X-CSRF-Token" = $script:jar["zces_csrf"] }
+    $unique = [guid]::NewGuid().ToString("N").Substring(0, 8)
+
+    $workplaces = Invoke-BffJson "GET" "/api/org/workplaces?page_size=50" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    $cp1 = ($workplaces.Body | ConvertFrom-Json).items | Where-Object { $_.code -eq "CP1" } | Select-Object -First 1
+    Assert-True ($null -ne $cp1) "CP1 workplace not found"
+
+    $warehouse = Invoke-BffJson "POST" "/api/warehouse/warehouses" @{
+        workplace_id = $cp1.id; code = "WH-SMK-$unique"; name = "Smoke warehouse"; name_fa = "Smoke warehouse FA"
+    } $headers
+    Assert-True ($warehouse.Status -eq 201) "warehouse create failed: $($warehouse.Status) $($warehouse.Body)"
+    $warehouseId = ($warehouse.Body | ConvertFrom-Json).id
+
+    $shelf = Invoke-BffJson "POST" "/api/warehouse/warehouses/$warehouseId/shelves" @{ code = "S-01" } $headers
+    Assert-True ($shelf.Status -eq 201) "shelf create failed: $($shelf.Status) $($shelf.Body)"
+    $shelfId = ($shelf.Body | ConvertFrom-Json).id
+
+    $item = Invoke-BffJson "POST" "/api/warehouse/items" @{
+        name = "Smoke stock item $unique"; name_fa = "Smoke stock item FA $unique"; code = "SMKSTK-$unique";
+        unit = "ad"; min_quantity = "10"
+    } $headers
+    Assert-True ($item.Status -eq 201) "item create failed: $($item.Status) $($item.Body)"
+    $itemId = ($item.Body | ConvertFrom-Json).id
+
+    $receive = Invoke-BffJson "POST" "/api/warehouse/placements/receive" @{
+        item_id = $itemId; shelf_id = $shelfId; quantity = "50"; reason = "smoke"
+    } $headers
+    Assert-True ($receive.Status -eq 200) "receive failed: $($receive.Status) $($receive.Body)"
+    $placement = $receive.Body | ConvertFrom-Json
+    Assert-True ($placement.quantity -eq "50.000") "expected 50.000, got $($placement.quantity)"
+
+    $issue = Invoke-BffJson "POST" "/api/warehouse/placements/issue" @{
+        placement_id = $placement.id; quantity = "15"; reason = "smoke issue"
+    } $headers
+    Assert-True ($issue.Status -eq 200) "issue failed: $($issue.Status) $($issue.Body)"
+
+    $overdraw = Invoke-BffJson "POST" "/api/warehouse/placements/issue" @{
+        placement_id = $placement.id; quantity = "999"
+    } $headers
+    Assert-True ($overdraw.Status -eq 409) "expected overdraw 409, got $($overdraw.Status)"
+    Assert-True (($overdraw.Body | ConvertFrom-Json).code -eq "INSUFFICIENT_STOCK") "expected INSUFFICIENT_STOCK"
+
+    $dropBelow = Invoke-BffJson "POST" "/api/warehouse/placements/issue" @{
+        placement_id = $placement.id; quantity = "30"
+    } $headers
+    Assert-True ($dropBelow.Status -eq 200) "issue to below-threshold failed: $($dropBelow.Status)"
+
+    $alerts = Invoke-BffJson "GET" "/api/warehouse/alerts?active=true" $null @{ Cookie = Get-CookiesFromJar $script:jar }
+    $alertItems = ($alerts.Body | ConvertFrom-Json).items
+    $mine = @($alertItems | Where-Object { $_.placement_id -eq $placement.id })
+    Assert-True ($mine.Count -eq 1) "expected exactly 1 active alert for the placement, got $($mine.Count)"
 }
 
 Write-Host ""

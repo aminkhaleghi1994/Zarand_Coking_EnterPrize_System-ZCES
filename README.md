@@ -16,14 +16,49 @@ settings, and complete audit logging.
 
 ## Status
 
-**Phase 2 complete (Auth, RBAC & Scope Platform)** — on top of the Phase 1
-foundation: login/logout/me with JWT access tokens and rotating refresh
-tokens (DB-backed families, reuse detection revokes the whole family),
-HttpOnly cookies owned by the BFF, double-submit CSRF, RBAC + hierarchical
-scope resolver (permission AND scope, union, implicit deny, Global >
-Complex > Workplace), append-only audit base with masking, idempotent
-seeds (initial admin + 7 base roles). Phases 3–11 run sequentially; next:
-`org-user-module`.
+**Phase 4 complete (Warehouse, Item Catalog & Inventory)** — on top of the
+Phase 1–3 foundation (platform, auth/RBAC/scopes, org structure & employees):
+an item catalog with duplicate-proof bilingual names/optional SKU codes and
+debounced live search, workplace-anchored warehouses with shelves, shelf-level
+stock placements that only ever change through an append-only movement ledger
+(FOR UPDATE serialization, negative quantities structurally impossible),
+low-stock alert episodes, and the bilingual RTL warehouse console. Phases
+5–11 run sequentially; next: `item-requests-flow`.
+
+## Warehouse module (Phase 4)
+
+**Module map**: `backend/app/modules/warehouse/` (models, schemas, repository,
+service, router, contracts) · `frontend/src/features/warehouse/` +
+`app/api/warehouse/**` (BFF) · migration `0004_warehouse_catalog_inventory`.
+
+**Stock-integrity rules** (constitution III):
+
+- Stock exists only as `InventoryPlacement` (shelf × item) and changes
+  exclusively through `StockMovement` rows written atomically in the same
+  transaction (`quantity >= 0` CHECK + row-locked decrements — negative
+  inventory is structurally impossible).
+- Movement types: `receive`, `issue`, `adjust` (+ `fulfillment` reserved for
+  Phase 5 via the module contract `apply_fulfillment_issue`, which runs in the
+  caller's transaction).
+- Low-stock alerts: one active episode per placement (partial unique index),
+  raised/resolved transactionally and audited; user-facing delivery arrives
+  with the notifications phase.
+
+**Permissions** (`module:resource:operation`, seeded idempotently):
+
+| Resource | Operations |
+|---|---|
+| `warehouse:item` | `create` `read` `update` `retire` |
+| `warehouse:warehouse` | `create` `read` `update` `retire` |
+| `warehouse:shelf` | `create` `read` `update` `retire` |
+| `warehouse:stock` | `receive` `issue` `adjust` `read` |
+| `warehouse:alert` | `read` |
+
+**Roles**: `WarehouseKeeper` — daily catalog + shelf management,
+receive/issue (no adjust); `WarehouseApprover` — read-only until the Phase-5
+approval flow; `SuperAdmin` — all. Scope anchoring: every warehouse belongs to
+one workplace, so warehouse visibility follows Global > Complex > Workplace
+exactly like employees.
 
 ## Quick start (Windows PowerShell)
 

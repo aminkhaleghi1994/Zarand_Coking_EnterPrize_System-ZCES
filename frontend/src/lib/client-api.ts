@@ -189,3 +189,173 @@ export const adminApi = {
       body: { password },
     }),
 };
+
+export type WarehouseItem = {
+  id: string;
+  version: number;
+  name: string;
+  name_fa: string;
+  code: string | null;
+  unit: string;
+  min_quantity: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type Warehouse = {
+  id: string;
+  version: number;
+  workplace_id: string;
+  code: string;
+  name: string;
+  name_fa: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type WarehouseShelf = {
+  id: string;
+  version: number;
+  warehouse_id: string;
+  code: string;
+  name: string | null;
+  name_fa: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ItemBrief = {
+  id: string;
+  name: string;
+  name_fa: string;
+  code: string | null;
+  unit: string;
+  min_quantity: string;
+};
+
+export type ShelfBrief = { id: string; code: string; name: string | null };
+export type WarehouseBrief = { id: string; code: string; name: string };
+
+export type Placement = {
+  id: string;
+  item: ItemBrief;
+  shelf: ShelfBrief;
+  warehouse: WarehouseBrief;
+  quantity: string;
+  below_min_threshold: boolean;
+};
+
+export type Movement = {
+  id: string;
+  movement_type: "receive" | "issue" | "adjust";
+  quantity_delta: string;
+  resulting_quantity: string;
+  reason: string | null;
+  actor_user_id: string | null;
+  created_at: string;
+};
+
+export type StockAlert = {
+  id: string;
+  placement_id: string;
+  item: ItemBrief;
+  shelf: ShelfBrief;
+  warehouse: WarehouseBrief;
+  quantity_at_alert: string;
+  threshold_at_alert: string;
+  current_quantity: string;
+  raised_at: string;
+  resolved_at: string | null;
+};
+
+export type WarehouseListParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  workplaceId?: string;
+  includeEmpty?: boolean;
+};
+
+function warehouseQuery(params: WarehouseListParams): string {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("page_size", String(params.pageSize));
+  if (params.search) query.set("search", params.search);
+  if (params.workplaceId) query.set("workplace_id", params.workplaceId);
+  if (params.includeEmpty) query.set("include_empty", "true");
+  const raw = query.toString();
+  return raw ? `?${raw}` : "";
+}
+
+export const warehouseApi = {
+  items: {
+    search: (search: string, signal?: AbortSignal) =>
+      bffFetch<Page<WarehouseItem>>(
+        `/api/warehouse/items${warehouseQuery({ search, pageSize: 20 })}`,
+        { signal },
+      ),
+    list: (params: WarehouseListParams, signal?: AbortSignal) =>
+      bffFetch<Page<WarehouseItem>>(`/api/warehouse/items${warehouseQuery(params)}`, { signal }),
+    create: (payload: unknown) =>
+      bffFetch<WarehouseItem>("/api/warehouse/items", { method: "POST", body: payload }),
+    update: (id: string, payload: unknown) =>
+      bffFetch<WarehouseItem>(`/api/warehouse/items/${id}`, { method: "PATCH", body: payload }),
+    retire: (id: string, version: number) =>
+      bffFetch<WarehouseItem>(`/api/warehouse/items/${id}/retire`, {
+        method: "POST",
+        body: { version },
+      }),
+  },
+  warehouses: {
+    list: (params: WarehouseListParams, signal?: AbortSignal) =>
+      bffFetch<Page<Warehouse>>(`/api/warehouse/warehouses${warehouseQuery(params)}`, { signal }),
+    create: (payload: unknown) =>
+      bffFetch<Warehouse>("/api/warehouse/warehouses", { method: "POST", body: payload }),
+    update: (id: string, payload: unknown) =>
+      bffFetch<Warehouse>(`/api/warehouse/warehouses/${id}`, { method: "PATCH", body: payload }),
+    retire: (id: string, version: number) =>
+      bffFetch<Warehouse>(`/api/warehouse/warehouses/${id}/retire`, {
+        method: "POST",
+        body: { version },
+      }),
+    shelves: (warehouseId: string, signal?: AbortSignal) =>
+      bffFetch<Page<WarehouseShelf>>(
+        `/api/warehouse/warehouses/${warehouseId}/shelves?page_size=100`,
+        { signal },
+      ),
+    createShelf: (warehouseId: string, payload: unknown) =>
+      bffFetch<WarehouseShelf>(`/api/warehouse/warehouses/${warehouseId}/shelves`, {
+        method: "POST",
+        body: payload,
+      }),
+    updateShelf: (shelfId: string, payload: unknown) =>
+      bffFetch<WarehouseShelf>(`/api/warehouse/shelves/${shelfId}`, {
+        method: "PATCH",
+        body: payload,
+      }),
+    retireShelf: (shelfId: string, version: number) =>
+      bffFetch<WarehouseShelf>(`/api/warehouse/shelves/${shelfId}/retire`, {
+        method: "POST",
+        body: { version },
+      }),
+  },
+  placements: {
+    list: (params: WarehouseListParams, signal?: AbortSignal) =>
+      bffFetch<Page<Placement>>(`/api/warehouse/placements${warehouseQuery(params)}`, { signal }),
+    receive: (payload: unknown) =>
+      bffFetch<Placement>("/api/warehouse/placements/receive", { method: "POST", body: payload }),
+    issue: (payload: unknown) =>
+      bffFetch<Placement>("/api/warehouse/placements/issue", { method: "POST", body: payload }),
+    adjust: (payload: unknown) =>
+      bffFetch<Placement>("/api/warehouse/placements/adjust", { method: "POST", body: payload }),
+    movements: (placementId: string, signal?: AbortSignal) =>
+      bffFetch<Page<Movement>>(`/api/warehouse/placements/${placementId}/movements?page_size=50`, {
+        signal,
+      }),
+  },
+  alerts: {
+    list: (status: "true" | "false" | "all", signal?: AbortSignal) =>
+      bffFetch<Page<StockAlert>>(`/api/warehouse/alerts?active=${status}&page_size=50`, { signal }),
+  },
+};

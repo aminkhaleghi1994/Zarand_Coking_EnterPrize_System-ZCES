@@ -143,10 +143,163 @@
       "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
     }
   },
+  "warehouse": {
+    "eyebrow": "انبار",
+    "title": "انبار و موجودی",
+    "description": "کاتالوگ کالا، قفسه‌ها، گردش موجودی و هشدار کمبود.",
+    "tabsLabel": "بخش‌های انبار",
+    "tabs": {
+      "catalog": "کاتالوگ کالا",
+      "warehouses": "انبارها",
+      "stock": "موجودی",
+      "alerts": "کمبود موجودی"
+    },
+    "catalog": {
+      "searchPlaceholder": "جستجوی کالا بر اساس نام یا کد…",
+      "createTitle": "کالای جدید",
+      "editTitle": "ویرایش کالا",
+      "empty": "هنوز کالایی ثبت نشده — اولین کالا را تعریف کنید.",
+      "searchHint": "چند حرف بنویسید تا جستجو آغاز شود.",
+      "noResults": "کالای منطابقی یافت نشد.",
+      "clearSelection": "پاک‌کردن",
+      "pageIndicator": "صفحه {page} از {totalPages}",
+      "previousPage": "قبلی",
+      "nextPage": "بعدی",
+      "retireTitle": "بازنشسته‌کردن کالا",
+      "retireDescription": "بازنشسته‌کردن «{name}»؟ نام و کد آن قابل استفاده مجدد می‌شود و از جستجو و فهرست‌ها حذف می‌شود.",
+      "form": {
+        "name": "نام (انگلیسی)",
+        "nameFa": "نام (فارسی)",
+        "code": "کد کالا (اختیاری)",
+        "unit": "واحد شمارش",
+        "minQuantity": "حداقل موجودی",
+        "description": "توضیحات",
+        "save": "ذخیره",
+        "saving": "در حال ذخیره…",
+        "cancel": "انصراف"
+      },
+      "table": {
+        "name": "کالا",
+        "code": "کد",
+        "unit": "واحد",
+        "minQuantity": "حداقل",
+        "actions": "عملیات",
+        "edit": "ویرایش",
+        "retire": "بازنشستن"
+      }
+    },
+    "warehouses": {
+      "createTitle": "انبار جدید",
+      "editTitle": "ویرایش انبار",
+      "manageShelves": "قفسه‌ها",
+      "empty": "انباری در محدوده دسترسی شما ثبت نشده است.",
+      "form": {
+        "workplace": "محل کار",
+        "workplacePlaceholder": "یک محل کار انتخاب کنید…",
+        "code": "کد",
+        "name": "نام (انگلیسی)",
+        "nameFa": "نام (فارسی)",
+        "save": "ذخیره",
+        "saving": "در حال ذخیره…",
+        "cancel": "انصراف"
+      },
+      "table": {
+        "edit": "ویرایش",
+        "retire": "بازنشستن"
+      },
+      "shelves": {
+        "sectionTitle": "قفسه‌ها",
+        "codePlaceholder": "کد قفسه",
+        "add": "افزودن قفسه",
+        "retire": "بازنشستن",
+        "empty": "هنوز قفسه‌ای ثبت نشده است."
+      }
+    },
+    "stock": {
+      "searchPlaceholder": "جستجوی موجودی بر اساس کالا…",
+      "receiveTitle": "ثبت ورود",
+      "issueTitle": "ثبت خروج",
+      "adjustTitle": "اصلاح",
+      "historyTitle": "گردش",
+      "includeEmpty": "نمایش موجودی‌های صفر",
+      "empty": "موجودی‌ای در محدوده دسترسی شما ثبت نشده است.",
+      "pageIndicator": "صفحه {page} از {totalPages}",
+      "previousPage": "قبلی",
+      "nextPage": "بعدی",
+      "table": {
+        "item": "کالا",
+        "shelf": "قفسه",
+        "warehouse": "انبار",
+        "quantity": "مقدار",
+        "actions": "عملیات"
+      },
+      "dialog": {
+        "item": "کالا",
+        "warehouse": "انبار",
+        "warehousePlaceholder": "یک انبار انتخاب کنید…",
+        "shelf": "قفسه",
+        "shelfPlaceholder": "یک قفسه انتخاب کنید…",
+        "quantity": "مقدار",
+        "countedQuantity": "مقدار شمارش‌شده",
+        "reason": "علت / مرجع (اختیاری)",
+        "target": "{item} روی قفسه {shelf} — موجودی فعلی {quantity}",
+        "submit": "ثبت",
+        "saving": "در حال ثبت…",
+        "cancel": "انصراف"
+      },
+      "history": {
+        "title": "گردش موجودی",
+        "subtitle": "{item} روی قفسه {shelf} — موجودی فعلی {quantity}",
+        "types": {
+          "receive": "ورود",
+          "issue": "خروج",
+          "adjust": "اصلاح"
+        },
+        "close": "بستن",
+        "empty": "گردشی ثبت نشده است."
+      }
+    },
+    "alerts": {
+      "filterLabel": "فیلتر وضعیت هشدار",
+      "filter": {
+        "true": "فعال",
+        "false": "برطرف‌شده",
+        "all": "همه"
+      },
+      "activeBadge": "فعال",
+      "resolved": "برطرف‌شده {date}",
+      "location": "{warehouse} · قفسه {shelf}",
+      "quantities": "هنگام هشدار {quantityAtAlert} · حد آستانه {threshold} · اکنون {current}",
+      "raisedAt": "ایجاد {date}",
+      "empty": "هشدار کمبود موجودی وجود ندارد — قفسه‌ها بالاتر از حد آستانه هستند."
+    },
+    "errors": {
+      "INSUFFICIENT_STOCK": "موجودی این قفسه کافی نیست — مقدار قابل دسترسی را بررسی کنید.",
+      "BUSINESS_RULE_VIOLATION": "این عملیات تا زمانی که موجودی روی قفسه‌ها باقی است مجاز نیست.",
+      "DUPLICATE_RESOURCE": "رکورد تکراری وجود دارد (نام یا کد کالا).",
+      "VALIDATION_ERROR": "فیلدهای مشخص‌شده را اصلاح کنید و دوباره تلاش کنید.",
+      "AUTHORIZATION_DENIED": "به این عملیات دسترسی ندارید.",
+      "STALE_VERSION": "این رکورد از زمان بازشدن تغییر کرده — صفحه را به‌روزرسانی کنید.",
+      "CONFLICT_CONCURRENT_UPDATE": "رکورد توسط شخص دیگری به‌روزرسانی شده — صفحه را به‌روزرسانی کنید.",
+      "RESOURCE_NOT_FOUND": "رکورد درخواستی یافت نشد.",
+      "AUTHENTICATION_REQUIRED": "لطفاً ابتدا وارد شوید.",
+      "INTERNAL_ERROR": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+      "generic": "عملیات ناموفق بود. لطفاً دوباره تلاش کنید."
+    },
+    "validation": {
+      "nameRequired": "نام الزامی است (حداکثر ۲۰۰ نویسه).",
+      "nameFaRequired": "نام فارسی الزامی است (حداکثر ۲۰۰ نویسه).",
+      "codeTooLong": "کد کالا حداکثر ۵۰ نویسه است.",
+      "unitRequired": "واحد شمارش الزامی است (حداکثر ۳۰ نویسه).",
+      "minQuantityInvalid": "حداقل موجودی باید عددی نامنفی با حداکثر ۳ رقم اعشار باشد.",
+      "descriptionTooLong": "توضیحات حداکثر ۱۰۰۰ نویسه است."
+    }
+  },
   "admin": {
     "eyebrow": "مدیریت",
     "title": "کنترل دسترسی",
     "description": "مدیریت نقش‌ها، مرور فهرست مجوزها و تخصیص دسترسی کاربران.",
+    "tabsLabel": "بخش‌های مدیریت",
     "tabs": {
       "roles": "نقش‌ها",
       "permissions": "مجوزها",

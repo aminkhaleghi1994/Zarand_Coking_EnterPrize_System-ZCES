@@ -25,7 +25,7 @@ export function AdminViews() {
 
   return (
     <div className="grid gap-6">
-      <div role="tablist" aria-label={t("tabs")} className="flex flex-wrap gap-1">
+      <div role="tablist" aria-label={t("tabsLabel")} className="flex flex-wrap gap-1">
         {(["roles", "permissions", "users"] as Tab[]).map((value) => (
           <button
             key={value}
