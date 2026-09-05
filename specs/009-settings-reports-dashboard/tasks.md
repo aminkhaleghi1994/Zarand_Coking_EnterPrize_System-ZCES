@@ -37,10 +37,10 @@
 
 ## Phase 4: Operational reports backend (US2)
 
-- [ ] T010 [P] [US2] `warehouse/contracts.py` filtered placement page (item/warehouse/shelf/quantity/threshold/below_min + warehouse_id + below_min_only filters, scope-filtered, paginated) + `reports/service.py` `inventory_report` + `GET /reports/inventory` (`reports:inventory:read`); tests: scope filter, below_min_only, pagination, 403
-- [ ] T011 [P] [US2] `warehouse/contracts.py` filtered request summary page (status/date filters + status_counts over filtered set) + `reports/service.py` `requests_report` + `GET /reports/requests` (`reports:request:read`); requester-own fallback for users without management scope (mirror request module semantics); tests: filters, counts, own-only fallback, 403
-- [ ] T012 [P] [US2] `loan/contracts.py` per-workplace/year aggregate rows (request counts by status, active loan/guarantee commitments, policy caps; scope-filtered) + `reports/service.py` `loans_report` + `GET /reports/loans` (`reports:loan:read`); tests: aggregate math vs seeded loans, scope filter, 403
-- [ ] T013 [US1] `audit/contracts.py` filtered audit page (action/entity_type/actor/date filters, masked snapshots per existing semantics, `read_full` gate) + `reports/service.py` `audit_report` + `GET /reports/audit` (`audit:log:read`); tests: filters, masking on/off, foreign trace fields present, 403
+- [x] T010 [P] [US2] `warehouse/contracts.py` filtered placement page (item/warehouse/shelf/quantity/threshold/below_min + warehouse_id + below_min_only filters, scope-filtered, paginated) + `reports/service.py` `inventory_report` + `GET /reports/inventory` (`reports:inventory:read`); tests: scope filter, below_min_only, pagination, 403
+- [x] T011 [P] [US2] `warehouse/contracts.py` filtered request summary page (status/date filters + status_counts over filtered set) + `reports/service.py` `requests_report` + `GET /reports/requests` (`reports:request:read`); requester-own fallback for users without management scope (mirror request module semantics); tests: filters, counts, own-only fallback, 403
+- [x] T012 [P] [US2] `loan/contracts.py` per-workplace/year aggregate rows (request counts by status, active loan/guarantee commitments, policy caps; scope-filtered) + `reports/service.py` `loans_report` + `GET /reports/loans` (`reports:loan:read`); tests: aggregate math vs seeded loans, scope filter, 403
+- [x] T013 [US1] `audit/contracts.py` filtered audit page (action/entity_type/actor/date filters, masked snapshots per existing semantics, `read_full` gate) + `reports/service.py` `audit_report` + `GET /reports/audit` (`audit:log:read`); tests: filters, masking on/off, foreign trace fields present, 403
 
 **Checkpoint**: all four report endpoints green with scope+masking tests.
 

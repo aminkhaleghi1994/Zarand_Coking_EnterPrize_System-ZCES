@@ -8,6 +8,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.common.pagination import Page
+
 
 class DashboardCountersOut(BaseModel):
     active_employees: int
@@ -54,6 +56,13 @@ class RequestReportRowOut(BaseModel):
     created_at: datetime
     decided_at: datetime | None
     fulfilled_at: datetime | None
+
+
+class RequestReportPage(Page[RequestReportRowOut]):
+    """List envelope + status counts over the filtered set (additive field,
+    present on every page)."""
+
+    status_counts: dict[str, int] = {}
 
 
 class LoanReportRowOut(BaseModel):
