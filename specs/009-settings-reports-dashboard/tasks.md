@@ -30,8 +30,8 @@
 
 ## Phase 3: Dashboard backend (US3)
 
-- [ ] T008 [FND] Cross-module count contracts: `user/contracts.py` `count_active_employees(scope_context)`, `warehouse/contracts.py` `count_catalog_items(scope_context)` + `count_open_item_requests` + `count_unresolved_alerts` + `item_requests_status_counts(scope_context)`, `loan/contracts.py` `count_active_loans(scope_context)` + `loans_status_counts`, notification total via existing repository; each applies the module's own scope filter; contract tests with global vs workplace scope
-- [ ] T009 [US3] `backend/app/modules/reports/schemas.py` (DashboardOut + breakdown DTOs) + `service.py` `dashboard(context)` composing the contracts; `router.py` `GET /reports/dashboard` (`reports:dashboard:read`); tests: counters match seeded data, workplace-scoped context yields subset counts, 403 without permission, response shape per contracts
+- [x] T008 [FND] Cross-module count contracts: `user/contracts.py` `count_active_employees(scope_context)`, `warehouse/contracts.py` `count_catalog_items(scope_context)` + `count_open_item_requests` + `count_unresolved_alerts` + `item_requests_status_counts(scope_context)`, `loan/contracts.py` `count_active_loans(scope_context)` + `loans_status_counts`, notification total via existing repository; each applies the module's own scope filter; contract tests with global vs workplace scope
+- [x] T009 [US3] `backend/app/modules/reports/schemas.py` (DashboardOut + breakdown DTOs) + `service.py` `dashboard(context)` composing the contracts; `router.py` `GET /reports/dashboard` (`reports:dashboard:read`); tests: counters match seeded data, workplace-scoped context yields subset counts, 403 without permission, response shape per contracts
 
 **Checkpoint**: dashboard endpoint proven scope-filtered.
 

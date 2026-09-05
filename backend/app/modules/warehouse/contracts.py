@@ -13,8 +13,9 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.common.scope import ScopeContext
 from app.core.errors import INSUFFICIENT_STOCK, AppError, not_found
-from app.modules.warehouse import repository
+from app.modules.warehouse import repository, request_repository
 from app.modules.warehouse.models import Shelf, Warehouse
 
 __all__ = [
@@ -23,9 +24,14 @@ __all__ = [
     "PlacementRef",
     "ShelfContext",
     "apply_fulfillment_issue",
+    "count_catalog_items",
+    "count_open_item_requests",
+    "count_unresolved_alerts",
     "get_item",
     "get_placement_for_stock",
     "get_shelf_context",
+    "item_requests_status_counts",
+    "low_stock_alerts_by_warehouse",
 ]
 
 
@@ -210,3 +216,113 @@ def write_audit_contract(
         },
         critical=True,
     )
+
+
+# --- Report/dashboard aggregates (Phase 9, research R3/R5) ---
+
+
+def count_catalog_items(session: Session) -> int:
+    """Active catalog items. The catalog is a global resource: scope gating
+    happens at the endpoint (permission + assignment), not per-row."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import ItemCatalog
+
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(ItemCatalog)
+            .where(ItemCatalog.deleted_at.is_(None))
+        )
+        or 0
+    )
+
+
+def count_open_item_requests(session: Session, context: ScopeContext) -> int:
+    """Scope-filtered count of requests still open (pending + approved).
+
+    ItemRequest is immutable history (no soft delete) — no deleted_at filter.
+    """
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import ItemRequest, RequestStatus
+
+    scope = request_repository._request_scope_filter(
+        context, request_repository.REQUEST_READ_OPERATION
+    )
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(ItemRequest)
+            .where(
+                scope,
+                ItemRequest.status.in_([RequestStatus.PENDING, RequestStatus.APPROVED]),
+            )
+        )
+        or 0
+    )
+
+
+def item_requests_status_counts(
+    session: Session, context: ScopeContext
+) -> dict[str, int]:
+    """Scope-filtered counts by request status (immutable rows — all of them)."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import ItemRequest, RequestStatus
+
+    scope = request_repository._request_scope_filter(
+        context, request_repository.REQUEST_READ_OPERATION
+    )
+    rows = session.execute(
+        select(ItemRequest.status, func.count())
+        .where(scope)
+        .group_by(ItemRequest.status)
+    ).all()
+    counts = {status.value: 0 for status in RequestStatus}
+    for status, count in rows:
+        counts[status.value] = int(count)
+    return counts
+
+
+def count_unresolved_alerts(session: Session, context: ScopeContext) -> int:
+    """Scope-filtered count of unresolved low-stock alerts."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import InventoryPlacement, Shelf, StockAlert
+
+    scope = repository._warehouse_scope_filter(context, "warehouse:alert:read")
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(StockAlert)
+            .join(InventoryPlacement, StockAlert.placement_id == InventoryPlacement.id)
+            .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+            .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+            .where(scope, StockAlert.resolved_at.is_(None))
+        )
+        or 0
+    )
+
+
+def low_stock_alerts_by_warehouse(
+    session: Session, context: ScopeContext
+) -> list[tuple[str, str, int]]:
+    """Unresolved alert counts grouped by warehouse:
+    ``(code, name, count)`` sorted by count descending."""
+    from sqlalchemy import func
+
+    from app.modules.warehouse.models import InventoryPlacement, Shelf, StockAlert
+
+    scope = repository._warehouse_scope_filter(context, "warehouse:alert:read")
+    rows = session.execute(
+        select(Warehouse.code, Warehouse.name, func.count())
+        .select_from(StockAlert)
+        .join(InventoryPlacement, StockAlert.placement_id == InventoryPlacement.id)
+        .join(Shelf, InventoryPlacement.shelf_id == Shelf.id)
+        .join(Warehouse, Shelf.warehouse_id == Warehouse.id)
+        .where(scope, StockAlert.resolved_at.is_(None))
+        .group_by(Warehouse.code, Warehouse.name)
+        .order_by(func.count().desc())
+    ).all()
+    return [(code, name, int(count)) for code, name, count in rows]
