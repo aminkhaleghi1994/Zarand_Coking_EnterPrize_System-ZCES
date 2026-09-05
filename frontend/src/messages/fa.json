@@ -682,5 +682,31 @@
     "switcher": "زبان",
     "en": "English",
     "fa": "فارسی"
+  },
+  "notifications": {
+    "title": "اعلان‌ها",
+    "openPanel": "باز کردن اعلان‌ها",
+    "closePanel": "بستن اعلان‌ها",
+    "unreadCount": "{count, plural, =0 {اعلان خوانده‌نشده ندارید} one {# اعلان خوانده‌نشده} other {# اعلان خوانده‌نشده}}",
+    "markAllRead": "علامت‌گذاری همه به‌عنوان خوانده‌شده",
+    "markRead": "خوانده شد",
+    "empty": "همه اعلان‌ها را مشاهده کردید",
+    "loadError": "بارگذاری اعلان‌ها ناموفق بود",
+    "unknownEvent": "اعلان",
+    "events": {
+      "UserCreated": "حساب کاربری جدید ایجاد شد",
+      "ItemCatalogCreated": "کالای جدید به فهرست اضافه شد",
+      "InventoryLowStock": "هشدار کمبود موجودی",
+      "ItemRequestCreated": "درخواست کالای جدید ثبت شد",
+      "ItemRequestApproved": "درخواست کالا تأیید شد",
+      "ItemRequestRejected": "درخواست کالا رد شد",
+      "ItemRequestFulfilled": "درخواست کالا تأمین شد",
+      "ItemReturned": "کالا به انبار برگشت داده شد",
+      "LoanRequestCreated": "درخواست وام جدید ثبت شد",
+      "LoanRequestActivated": "درخواست وام فعال شد",
+      "LoanRequestSettled": "وام تسویه شد",
+      "AssetAssigned": "دارایی واگذار شد",
+      "AssetReturned": "دارایی بازگردانده شد"
+    }
   }
 }

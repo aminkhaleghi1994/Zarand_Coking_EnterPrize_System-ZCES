@@ -65,8 +65,8 @@
 
 ## Phase 6: US4 — Notification inbox UI (P2)
 
-- [ ] T011 [US4] BFF: `frontend/src/app/api/notifications/**` (list/unread-count/[id]/read/read-all) + streaming SSE passthrough route forwarding the session cookie; `lib/client-api.ts` `notificationApi` + types; `messages/{en,fa}.json` `notifications.*` namespace incl. per-event bilingual descriptions (FR-009, contracts)
-- [ ] T012 [US4] UI: header bell with live unread badge (EventSource on app mount → invalidate queries), `features/notifications/NotificationPanel.tsx` (newest-first list, per-event descriptions, mark one/all read, skeletons) ; `features/notifications/useNotificationStream.ts` hook; responsive + reduced motion (FR-009, SC-005, research R11)
+- [x] T011 [US4] BFF: `frontend/src/app/api/notifications/**` (list/unread-count/[id]/read/read-all) + streaming SSE passthrough route forwarding the session cookie; `lib/client-api.ts` `notificationApi` + types; `messages/{en,fa}.json` `notifications.*` namespace incl. per-event bilingual descriptions (FR-009, contracts)
+- [x] T012 [US4] UI: header bell with live unread badge (EventSource on app mount → invalidate queries), `features/notifications/NotificationPanel.tsx` (newest-first list, per-event descriptions, mark one/all read, skeletons) ; `features/notifications/useNotificationStream.ts` hook; responsive + reduced motion (FR-009, SC-005, research R11)
 
 ## Phase 7: US5 — Criticality observability (P2)
 

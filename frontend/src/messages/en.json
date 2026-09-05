@@ -682,5 +682,31 @@
     "switcher": "Language",
     "en": "English",
     "fa": "فارسی"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "openPanel": "Open notifications",
+    "closePanel": "Close notifications",
+    "unreadCount": "{count, plural, =0 {No unread notifications} one {# unread notification} other {# unread notifications}}",
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark as read",
+    "empty": "You are all caught up",
+    "loadError": "Notifications could not be loaded",
+    "unknownEvent": "Notification",
+    "events": {
+      "UserCreated": "New user account created",
+      "ItemCatalogCreated": "Catalog item added",
+      "InventoryLowStock": "Low stock alert",
+      "ItemRequestCreated": "New item request",
+      "ItemRequestApproved": "Item request approved",
+      "ItemRequestRejected": "Item request rejected",
+      "ItemRequestFulfilled": "Item request fulfilled",
+      "ItemReturned": "Item returned to stock",
+      "LoanRequestCreated": "New loan request",
+      "LoanRequestActivated": "Loan request activated",
+      "LoanRequestSettled": "Loan settled",
+      "AssetAssigned": "Asset assigned",
+      "AssetReturned": "Asset returned"
+    }
   }
 }
